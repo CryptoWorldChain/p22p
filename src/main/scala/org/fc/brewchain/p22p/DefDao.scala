@@ -16,6 +16,8 @@ import onight.tfw.otransio.api.IPacketSender
 import onight.tfw.otransio.api.PSender
 import onight.tfw.ntrans.api.annotation.ActorRequire
 import org.fc.brewchain.p22p.pbgens.P22P.PModule
+import org.brewchain.bcapi.backend.ODBSupport
+import org.brewchain.bcapi.backend.ODBDao
 
 abstract class PSMPZP[T <: Message] extends SessionModules[T] with PBUtils with OLog {
   override def getModule: String = PModule.PZP.name()
@@ -24,28 +26,20 @@ abstract class PSMPZP[T <: Message] extends SessionModules[T] with PBUtils with 
 @NActorProvider
 @Slf4j
 object Daos extends PSMPZP[Message] {
-  @StoreDAO(target = "etcd", daoClass = classOf[OParam])
-  @BeanProperty
-  var oparam: OParam = null
 
-  @StoreDAO(target = "obdb", daoClass = classOf[OParam])
+  @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSP22p])
   @BeanProperty
-  var odb: OParam = null
+  var odb: ODBSupport = null
 
-  def setOparam(daoparam: DomainDaoSupport) {
-    if (daoparam != null && daoparam.isInstanceOf[OParam]) {
-      oparam = daoparam.asInstanceOf[OParam];
+  def setOdb(daodb: DomainDaoSupport) {
+    if (daodb != null && daodb.isInstanceOf[ODSP22p]) {
+      odb = daodb.asInstanceOf[ODBSupport];
     } else {
-      log.warn("cannot set OParam from:" + daoparam);
+      log.warn("cannot set ODBSupport from:" + daodb);
     }
   }
-  
-  def setOdb(daoparam: DomainDaoSupport) {
-    if (daoparam != null && daoparam.isInstanceOf[OParam]) {
-      odb = daoparam.asInstanceOf[OParam];
-    } else {
-      log.warn("cannot set OParam from:" + daoparam);
-    }
+  def isDbReady(): Boolean = {
+    return odb != null && odb.getDaosupport.isInstanceOf[ODBSupport];
   }
 
   @BeanProperty

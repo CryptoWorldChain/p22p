@@ -20,7 +20,6 @@ import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.bcapi.crypto.BitMap
 import org.fc.brewchain.p22p.pbgens.P22P.PVBase
 import org.fc.brewchain.p22p.pbgens.P22P.PBFTStage
-import org.fc.brewchain.p22p.pbft.ViewState
 import org.fc.brewchain.p22p.node.Networks
 import com.google.protobuf.Any
 import com.google.protobuf.ByteString

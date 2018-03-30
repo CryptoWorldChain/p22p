@@ -13,6 +13,10 @@ import com.google.protobuf.Message
 import org.fc.brewchain.p22p.core.MessageSender
 import org.fc.brewchain.bcapi.crypto.BCNodeHelper
 import org.fc.brewchain.p22p.action.PMNodeHelper
+import org.brewchain.bcapi.gens.Odb.OKey
+import org.brewchain.bcapi.gens.Odb.OValueOrBuilder
+import com.google.protobuf.StringValue
+import com.google.protobuf.ByteString
 
 object NodeInstance extends OLog with PMNodeHelper {
   //  val node_name = NodeHelper.getCurrNodeName
@@ -29,24 +33,24 @@ object NodeInstance extends OLog with PMNodeHelper {
     node == root || root.bcuid.equals(node.bcuid)
   }
   def getFromDB(key: String, defaultv: String): String = {
-    val v = Daos.odb.get(key)
-    if (v == null || v.get() == null || v.get.getValue == null) {
+    val v = Daos.odb.get(OKey.newBuilder().setData(ByteString.copyFrom(key.getBytes)).build())
+    if (v == null || v.get() == null) {
       val prop = NodeHelper.getPropInstance.get(key, defaultv);
       NodeHelper.envInEnv(prop)
     } else {
-      v.get.getValue.trim()
+      v.get.getInfo
     }
 
   }
 
   def syncInfo(node: PNode): Boolean = {
     if (Daos.odb == null) return false;
-    Daos.odb.put(PROP_NODE_INFO, serialize(node));
+    Daos.odb.putInfo(PROP_NODE_INFO, serialize(node));
     true
   }
   def isReady(): Boolean = {
     log.debug("check Node Instace:Daos.odb=" + Daos.odb)
-    if (Daos.odb == null) return false;
+    if (!Daos.isDbReady()) return false;
     if (rootnode == null)
       initNode()
     if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
@@ -103,7 +107,7 @@ object NodeInstance extends OLog with PMNodeHelper {
         v = PNode.genIdx()
       } while (getNodeIdx == v || test_bits.testBit(v))
 
-      Daos.odb.put(NODE_ID_PROP, String.valueOf(v))
+      Daos.odb.putInfo(NODE_ID_PROP, String.valueOf(v))
       rootnode = rootnode.changeIdx(v)
       syncInfo(rootnode)
       log.debug("changeNode Index=" + v)
