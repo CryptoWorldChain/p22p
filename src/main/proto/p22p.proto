@@ -83,14 +83,22 @@ enum PBFTStage{
 	PREPARE = 1;
 	COMMIT = 2;
 	REPLY = 3;
+	NOOP = 4;// do nothing.. still wait for other actions
+	REJECT = 99;
+	
 }
 
+enum PVType{
+	VOTE_IDX = 0;//投票pending 的节点
+}
 message PVBase{
 	PBFTStage state = 1 ;//状态
-	uint32 m_type = 2;//消息类型
+	PVType m_type = 2;//消息类型
 	uint32 v = 3;//该消息类型对应的view_id序列
 	uint32 max_vid = 4;//最大的id
 	uint32 n = 5;// number
+	uint64 create_time = 6;
+	uint64 last_update_time = 7;
 	bytes contents = 10;
 	
 	string message_uid = 30;//消息的uuid

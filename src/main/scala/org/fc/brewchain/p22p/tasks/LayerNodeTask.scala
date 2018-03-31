@@ -34,8 +34,8 @@ object LayerNodeTask extends OLog with Runnable {
     Networks.instance.addPendingNode(NodeInstance.root())
     
     Scheduler.scheduleWithFixedDelay(JoinNetwork, 5, 60, TimeUnit.SECONDS)
-    Scheduler.scheduleWithFixedDelay(CheckingHealthy, 10, 10, TimeUnit.SECONDS)
-//    Scheduler.scheduleWithFixedDelay(VoteNodeMap, 10, 10, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(CheckingHealthy, 120, 120, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(VoteNodeMap, 10, 10, TimeUnit.SECONDS)
 
   }
 //  lazy val currPMNodeInfo = PMNodeInfo.newBuilder().setAddress(NodeInstance.root.address) //

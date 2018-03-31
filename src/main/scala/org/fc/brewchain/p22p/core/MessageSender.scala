@@ -15,6 +15,8 @@ import onight.tfw.otransio.api.PackHeader
 import org.fc.brewchain.bcapi.BCPacket
 import org.fc.brewchain.p22p.node.NodeInstance
 import org.apache.commons.lang3.StringUtils
+import org.fc.brewchain.p22p.node.Networks
+import com.google.protobuf.MessageOrBuilder
 
 @NActorProvider
 object MessageSender extends NActor with OLog {
@@ -40,11 +42,51 @@ object MessageSender extends NActor with OLog {
     log.debug("sendMessage:" + pack)
     sockSender.asyncSend(pack, cb)
   }
-  def postMessage(gcmd: String, body: Message, node: PNode) {
+
+  def wallMessage(gcmd: String, body: MessageOrBuilder, directBcuid: String = null) {
+    val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
+    if (directBcuid != null) {
+      pack.putHeader(PackHeader.PACK_TO, directBcuid);
+      sockSender.post(pack)
+    }
+
+    Networks.instance.directNodes.map { node =>
+      if (directBcuid == null || !StringUtils.equals(directBcuid, node.bcuid)) {
+        appendUid(pack, node)
+        sockSender.post(pack)
+      }
+    }
+
+    log.debug("wallMessage.OK:" + pack)
+  }
+
+  def postMessage(gcmd: String, body: MessageOrBuilder, node: PNode) {
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node)
     log.debug("postMessage:" + pack)
     sockSender.post(pack)
+  }
+
+  def postMessage(gcmd: String, body: MessageOrBuilder, bcuid: String) {
+    val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
+    pack.putHeader(PackHeader.PACK_TO, bcuid);
+    log.debug("postMessage:bcuid:" + pack)
+    sockSender.post(pack)
+  }
+
+  def replyPostMessage(frompack: FramePacket, body: MessageOrBuilder) {
+    val gcmd = frompack.getModuleAndCMD;
+    val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
+    pack.putHeader(PackHeader.PACK_TO, frompack.getExtStrProp(PackHeader.PACK_FROM));
+    log.debug("reply_postMessage:bcuid:" + pack)
+    sockSender.post(pack)
+  }
+
+  def replyWallMessage(frompack: FramePacket, body: MessageOrBuilder) {
+    val gcmd = frompack.getModuleAndCMD;
+    log.debug("replyWallMessage:" + body)
+    wallMessage(gcmd, body, frompack.getExtStrProp(PackHeader.PACK_FROM));
+    
   }
 
   def dropNode(node: PNode) {

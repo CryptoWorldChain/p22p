@@ -31,15 +31,28 @@ object Daos extends PSMPZP[Message] {
   @BeanProperty
   var odb: ODBSupport = null
 
+  @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSViewStateStorage])
+  @BeanProperty
+  var viewstateDB: ODBSupport = null
+
+  
   def setOdb(daodb: DomainDaoSupport) {
-    if (daodb != null && daodb.isInstanceOf[ODSP22p]) {
+    if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
       odb = daodb.asInstanceOf[ODBSupport];
     } else {
-      log.warn("cannot set ODBSupport from:" + daodb);
+      log.warn("cannot set odb ODBSupport from:" + daodb);
+    }
+  }
+   def setViewstateDB(daodb: DomainDaoSupport) {
+    if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
+      viewstateDB = daodb.asInstanceOf[ODBSupport];
+    } else {
+      log.warn("cannot set viewstateDB ODBSupport from:" + daodb);
     }
   }
   def isDbReady(): Boolean = {
-    return odb != null && odb.getDaosupport.isInstanceOf[ODBSupport];
+    return odb != null && odb.getDaosupport.isInstanceOf[ODBSupport]&&
+    viewstateDB != null && viewstateDB.getDaosupport.isInstanceOf[ODBSupport];
   }
 
   @BeanProperty

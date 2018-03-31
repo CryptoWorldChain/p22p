@@ -24,6 +24,7 @@ import org.fc.brewchain.p22p.node.Networks
 import com.google.protobuf.Any
 import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.pbft.StateStorage
+import org.fc.brewchain.p22p.pbgens.P22P.PVType
 
 //投票决定当前的节点
 object VoteNodeMap extends SRunner {
@@ -38,10 +39,10 @@ object VoteNodeMap extends SRunner {
       val vbase = PVBase.newBuilder();
       val vbody = PBVoteNodeIdx.newBuilder();
       vbase.setState(PBFTStage.PRE_PREPARE)
-      vbase.setMType(0)
+      vbase.setMType(PVType.VOTE_IDX)
       //    vbase.setMaxVid(value)
-      vbase.setN(StateStorage.nextN())
-      vbase.setV(StateStorage.curV());
+      //      vbase.setN(1)
+      vbase.setV(1);
 
       vbase.setFromBcuid(NodeInstance.root.bcuid);
 
@@ -63,11 +64,14 @@ object VoteNodeMap extends SRunner {
       if (Networks.instance.node_bits.bitCount <= 0) {
         log.debug("networks has not directnode!")
         //init. start to vote.
-        val vbuild = vbase.build();
-        Networks.instance.pendingNodes.map(n =>
-          {
-            MessageSender.postMessage("VOTPZP", vbuild, n)
-          })
+        if (StateStorage.nextV(vbase) > 0) {
+          log.debug("broadcast Vote Message")
+          val vbuild = vbase.build();
+          Networks.instance.pendingNodes.map(n =>
+            {
+              MessageSender.postMessage("VOTPZP", vbuild, n)
+            })
+        }
       }
       //    NodeInstance.forwardMessage("VOTPZP", vbody.build());
       //vbody.setNodeBitsEnc(bits.toString(16));

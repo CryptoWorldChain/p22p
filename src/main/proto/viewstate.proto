@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package org.brewchain.p22p.entitygens;
+package org.brewchain.p22p.gens;
 
 
 message EViewState
@@ -9,9 +9,9 @@ message EViewState
 	int32 n = 2; 
 	string vtype = 3;
 	string contents = 4;
-	string form_bcuid = 5;
-	double	propd = 10;
-	int32	propi = 11;
+	string from_bcuid = 5;
+	int64 create_time = 6;
+	
 	bytes	exts = 20;
 	
 	string sign = 100;

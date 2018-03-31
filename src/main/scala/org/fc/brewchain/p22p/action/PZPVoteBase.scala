@@ -31,6 +31,11 @@ import org.fc.brewchain.p22p.pbgens.P22P.PVBase
 import onight.tfw.mservice.NodeHelper
 import com.google.protobuf.Any
 import org.fc.brewchain.p22p.pbgens.P22P.PBVoteNodeIdx
+import org.fc.brewchain.p22p.pbgens.P22P.PVType
+import org.fc.brewchain.p22p.Daos
+import org.fc.brewchain.p22p.pbft.StateStorage
+import org.fc.brewchain.p22p.pbgens.P22P.PBFTStage
+import org.fc.brewchain.p22p.core.MessageSender
 
 @NActorProvider
 @Slf4j
@@ -45,10 +50,20 @@ object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with P
     log.debug("onPBPacket:size=" + pack.genBodyBytes().size + ":" + pack)
     var ret = PRetJoin.newBuilder();
     try {
-      val v = fromByteSting(pbo.getContents, classOf[PBVoteNodeIdx])
-      //      pbo.getVoteContentsList.map { v =>
-      //        val a = v.unpack(classOf[PBVoteNodeIdx]);
-      log.debug("get VoteBase:Info:" + v)
+      pbo.getMType match {
+        case PVType.VOTE_IDX =>
+          val nextstate = StateStorage.vote(pbo);
+          val reply = pbo.toBuilder().setState(nextstate).setFromBcuid(NodeInstance.root().bcuid);
+          nextstate match {
+            case PBFTStage.REJECT =>
+              MessageSender.replyPostMessage(pack, reply);
+            case _ =>
+              MessageSender.replyWallMessage(pack, reply);
+          }
+        case _ =>
+          log.debug("unknow vote message:type=" + pbo.getMType)
+      }
+
       //      }
     } catch {
       case fe: NodeInfoDuplicated => {
