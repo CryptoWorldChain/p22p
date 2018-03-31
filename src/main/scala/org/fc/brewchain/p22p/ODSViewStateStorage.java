@@ -12,8 +12,11 @@ public class ODSViewStateStorage extends ODBDao {
 
 	@Override
 	public String getDomainName() {
-		return "pzp_viewstate";
+		return "pzp_viewstate.nodename";
 	}
+//	public static void main(String[] args) {
+//		System.out.println("pzp_viewstate.nodename".split("\\.")[1]);
+//	}
 
 	
 }

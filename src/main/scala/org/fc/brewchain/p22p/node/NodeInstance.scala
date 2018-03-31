@@ -13,10 +13,9 @@ import com.google.protobuf.Message
 import org.fc.brewchain.p22p.core.MessageSender
 import org.fc.brewchain.bcapi.crypto.BCNodeHelper
 import org.fc.brewchain.p22p.action.PMNodeHelper
-import org.brewchain.bcapi.gens.Odb.OKey
-import org.brewchain.bcapi.gens.Odb.OValueOrBuilder
 import com.google.protobuf.StringValue
 import com.google.protobuf.ByteString
+import org.brewchain.bcapi.gens.Oentity.OKey
 
 object NodeInstance extends OLog with PMNodeHelper {
   //  val node_name = NodeHelper.getCurrNodeName

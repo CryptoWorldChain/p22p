@@ -66,8 +66,8 @@ object VoteNodeMap extends SRunner {
         //init. start to vote.
         if (StateStorage.nextV(vbase) > 0) {
           vbase.setV(vbase.getV);
-          log.debug("broadcast Vote Message:V=" + vbase.getV+",N="+vbase.getN+",from="+vbase.getFromBcuid)
           vbase.setN(Networks.instance.pendingNodes.size);
+          log.debug("broadcast Vote Message:V=" + vbase.getV + ",N=" + vbase.getN + ",from=" + vbase.getFromBcuid)
           val vbuild = vbase.build();
           Networks.instance.pendingNodes.map(n =>
             {
