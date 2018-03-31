@@ -119,4 +119,13 @@ object NodeInstance extends OLog with PMNodeHelper {
     getNodeIdx > 0 && Networks.instance.node_bits.bitCount >= 2;
   }
 
+  def isLocal(bcuid: String): Boolean = {
+    StringUtils.equals(root().bcuid, bcuid);
+  }
+ 
+  def isLocal(node: PNode): Boolean = {
+    node == root() ||
+      StringUtils.equals(root().bcuid, node.bcuid);
+  }
+
 }

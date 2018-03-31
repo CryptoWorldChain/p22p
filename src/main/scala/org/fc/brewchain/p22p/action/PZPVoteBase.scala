@@ -47,16 +47,19 @@ object PZPVoteBase extends PSMPZP[PVBase] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PVBase, handler: CompleteHandler) = {
-    log.debug("onPBPacket:size=" + pack.genBodyBytes().size + ":" + pack)
+    log.info("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState+",V="+pbo.getV+",N="+pbo.getN)
     var ret = PRetJoin.newBuilder();
     try {
       pbo.getMType match {
         case PVType.VOTE_IDX =>
           val nextstate = StateStorage.vote(pbo);
-          val reply = pbo.toBuilder().setState(nextstate).setFromBcuid(NodeInstance.root().bcuid);
+          val reply = pbo.toBuilder().setState(nextstate).setFromBcuid(NodeInstance.root().bcuid).build();
           nextstate match {
             case PBFTStage.REJECT =>
               MessageSender.replyPostMessage(pack, reply);
+            case PBFTStage.NOOP =>
+              //do nothing.
+              
             case _ =>
               MessageSender.replyWallMessage(pack, reply);
           }

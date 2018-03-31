@@ -59,5 +59,6 @@ trait PMNodeHelper {
   def fromByteSting[T](str: ByteString, clazz: Class[T]): T = {
     pser.deserialize(str.toByteArray(), clazz)
   }
-
+  
 }
+

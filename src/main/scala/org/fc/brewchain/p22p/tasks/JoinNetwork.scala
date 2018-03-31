@@ -57,7 +57,7 @@ object JoinNetwork extends SRunner {
                 log.debug("send JINPZP success:to " + n.uri + ",body=" + fp.getBody)
                 val retjoin = PRetJoin.newBuilder().mergeFrom(fp.getBody);
                 if (retjoin.getRetCode() == -1) { //same message
-                  log.debug("get Same Node:" + n);
+                  log.debug("get Same Node:" + n.getName);
                   sameNodes.put(n.uri.hashCode(), n);
                   duplictedInfoNodes.+=(n.uri.hashCode() -> n);
                   MessageSender.dropNode(n)
@@ -71,7 +71,7 @@ object JoinNetwork extends SRunner {
                     //
                   }
                 }
-                log.debug("get nodes:" + retjoin);
+                log.debug("get nodes:count=" + retjoin.getNodesCount);
               }
               def onFailed(e: java.lang.Exception, fp: FramePacket) {
                 log.debug("send JINPZP ERROR " + n.uri + ",e=" + e.getMessage, e)

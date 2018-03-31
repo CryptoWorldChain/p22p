@@ -29,6 +29,8 @@ import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
 import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.p22p.node.PNode
+import org.brewchain.bcapi.utils.PacketIMHelper._
+
 
 @NActorProvider
 @Slf4j
@@ -40,7 +42,7 @@ object PZPNodeJoin extends PSMPZP[PSJoin] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSJoin, handler: CompleteHandler) = {
-    log.debug("onPBPacket::" + pbo)
+    log.debug("JoinService::" + pack.getFrom()+",OP="+pbo.getOp)
     var ret = PRetJoin.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
@@ -58,7 +60,7 @@ object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with P
         } else {
           //name, idx, protocol, address, port, startup_time, pub_key, counter,idx
           val n = fromPMNode(from);
-          log.info("add Pending Node:" + n);
+          log.info("add Pending Node:bcuid=" + n.bcuid);
           Networks.instance.addPendingNode(n)
         }
       } else if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
@@ -69,7 +71,7 @@ object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with P
 //      ret.addNodes(toPMNode(NodeInstance.root));
 
       Networks.instance.directNodes.map { _pn =>
-        log.debug("directnodes==" + _pn)
+        log.debug("direct.node==" + _pn.bcuid)
         ret.addNodes(toPMNode(_pn));
       }
     } catch {

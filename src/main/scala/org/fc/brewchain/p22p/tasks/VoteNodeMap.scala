@@ -42,7 +42,7 @@ object VoteNodeMap extends SRunner {
       vbase.setMType(PVType.VOTE_IDX)
       //    vbase.setMaxVid(value)
       //      vbase.setN(1)
-      vbase.setV(1);
+      //      vbase.setV(1);
 
       vbase.setFromBcuid(NodeInstance.root.bcuid);
 
@@ -58,14 +58,16 @@ object VoteNodeMap extends SRunner {
 
       vbody.setNodeBitsEnc(BitMap.hexToMapping(bits))
 
-      log.info("vote -- Nodes:" + vbody);
       vbase.setContents(toByteSting(vbody))
       //      vbase.addVoteContents(Any.pack(vbody.build()))
       if (Networks.instance.node_bits.bitCount <= 0) {
-        log.debug("networks has not directnode!")
+        //        log.debug("networks has not directnode!")
+        log.info("vote -- Nodes:" + vbody.getNodeBitsEnc);
         //init. start to vote.
         if (StateStorage.nextV(vbase) > 0) {
-          log.debug("broadcast Vote Message")
+          vbase.setV(vbase.getV);
+          log.debug("broadcast Vote Message:V=" + vbase.getV+",N="+vbase.getN+",from="+vbase.getFromBcuid)
+          vbase.setN(Networks.instance.pendingNodes.size);
           val vbuild = vbase.build();
           Networks.instance.pendingNodes.map(n =>
             {
