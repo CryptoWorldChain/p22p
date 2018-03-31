@@ -30,39 +30,48 @@ import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
 import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import org.fc.brewchain.p22p.node.Networks
+import org.fc.brewchain.p22p.pbgens.P22P.PSVoteState
+import org.fc.brewchain.p22p.pbgens.P22P.PRetVoteState
+import org.fc.brewchain.p22p.Daos
+import org.fc.brewchain.p22p.pbft.StateStorage
+import org.brewchain.bcapi.gens.Oentity.OValue
+import org.fc.brewchain.p22p.pbgens.P22P.PVBase
+import com.google.protobuf.ByteString
 
 @NActorProvider
 @Slf4j
-object PZPNodeInfo extends PSMPZP[PSNodeInfo] {
-  override def service = PZPNodeInfoService
+object PZPStateInfo extends PSMPZP[PSVoteState] {
+  override def service = PZPStateInfoService
 }
 
 //
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
-object PZPNodeInfoService extends OLog with PBUtils with LService[PSNodeInfo] with PMNodeHelper {
-  override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
+object PZPStateInfoService extends OLog with PBUtils with LService[PSVoteState] with PMNodeHelper {
+  override def onPBPacket(pack: FramePacket, pbo: PSVoteState, handler: CompleteHandler) = {
     log.debug("onPBPacket::" + pbo)
-    var ret = PRetNodeInfo.newBuilder();
+    var ret = PRetVoteState.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
-      ret.setCurrent(toPMNode(NodeInstance.root))
-      val pending = Networks.instance.pendingNodes;
-      val directNodes = Networks.instance.directNodes;
-      log.debug("pending=" + Networks.instance.pendingNodes.size + "::" + Networks.instance.pendingNodes)
-      //      ret.addNodes(toPMNode(NodeInstance.curnode));
-      pending.map { _pn =>
-        log.debug("pending==" + _pn)
-        ret.addPendings(toPMNode(_pn));
-      }
-      directNodes.map { _pn =>
-        log.debug("directnodes==" + _pn)
-        ret.addNodes(toPMNode(_pn));
+      val strkey = StateStorage.STR_seq(pbo.getMTypeValue);
+      Daos.viewstateDB.get(strkey).get match {
+        case ov if ov != null =>
+          val pb = PVBase.newBuilder().mergeFrom(ov.getExtdata);
+          pb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray())))
+          ret.setCur(pb);
+
+          Daos.viewstateDB.listBySecondKey(strkey + "." + pb.getFromBcuid + "." + pb.getN).get match {
+            case ovs if ovs != null =>
+              ovs.map { x =>
+                //                ret.setNodes(x$1)
+                val ppb=PVBase.newBuilder().mergeFrom(x.getExtdata);
+                ppb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray())))
+                ret.addNodes(ppb)
+              }
+          }
+        case _ =>
+          ret.setRetCode(-1).setRetMessage("NOT FOUND CURR")
       }
     } catch {
-      case fe: NodeInfoDuplicated => {
-        ret.clear();
-        ret.setRetCode(-1).setRetMessage(fe.getMessage)
-      }
       case e: FBSException => {
         ret.clear()
         ret.setRetCode(-2).setRetMessage(e.getMessage)
@@ -77,5 +86,5 @@ object PZPNodeInfoService extends OLog with PBUtils with LService[PSNodeInfo] wi
     }
   }
   //  override def getCmds(): Array[String] = Array(PWCommand.LST.name())
-  override def cmd: String = PCommand.INF.name();
+  override def cmd: String = PCommand.VTI.name();
 }

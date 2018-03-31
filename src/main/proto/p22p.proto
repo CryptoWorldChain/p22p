@@ -13,6 +13,7 @@ enum PCommand {
 	INF = 3;//获取当前节点信息
 	VOT = 4;//PBFT投票
 	
+	VTI = 5;//stateview的信息
 	
 	HBT = 10;//HeartBeat!检查心跳
 };
@@ -85,7 +86,6 @@ enum PBFTStage{
 	REPLY = 3;
 	NOOP = 4;// do nothing.. still wait for other actions
 	REJECT = 99;
-	
 }
 
 enum PVType{
@@ -111,4 +111,17 @@ message PBVoteNodeIdx{//投票决定节点的idx,80%通过才行
 	string node_bits_enc = 2;//所有节点的编码信息
 }
 
+
+message PSVoteState{
+	PVType m_type = 2;//消息类型
+}
+
+message PRetVoteState{
+	int32 ret_code = 1;//返回
+	string ret_message = 2;//返回信息
+
+	PVType 	m_type = 3;//消息类型
+	PVBase	cur = 4;//当前信息
+	repeated PVBase	nodes = 5;//所有节点的信息 
+}
 

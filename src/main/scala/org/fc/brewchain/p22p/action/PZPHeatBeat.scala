@@ -33,31 +33,19 @@ import org.fc.brewchain.p22p.node.Networks
 
 @NActorProvider
 @Slf4j
-object PZPNodeInfo extends PSMPZP[PSNodeInfo] {
-  override def service = PZPNodeInfoService
+object PZPHeatBeat extends PSMPZP[PSNodeInfo] {
+  override def service = PZPHeatBeatService
 }
 
 //
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
-object PZPNodeInfoService extends OLog with PBUtils with LService[PSNodeInfo] with PMNodeHelper {
+object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
     log.debug("onPBPacket::" + pbo)
     var ret = PRetNodeInfo.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
       ret.setCurrent(toPMNode(NodeInstance.root))
-      val pending = Networks.instance.pendingNodes;
-      val directNodes = Networks.instance.directNodes;
-      log.debug("pending=" + Networks.instance.pendingNodes.size + "::" + Networks.instance.pendingNodes)
-      //      ret.addNodes(toPMNode(NodeInstance.curnode));
-      pending.map { _pn =>
-        log.debug("pending==" + _pn)
-        ret.addPendings(toPMNode(_pn));
-      }
-      directNodes.map { _pn =>
-        log.debug("directnodes==" + _pn)
-        ret.addNodes(toPMNode(_pn));
-      }
     } catch {
       case fe: NodeInfoDuplicated => {
         ret.clear();
@@ -77,5 +65,5 @@ object PZPNodeInfoService extends OLog with PBUtils with LService[PSNodeInfo] wi
     }
   }
   //  override def getCmds(): Array[String] = Array(PWCommand.LST.name())
-  override def cmd: String = PCommand.INF.name();
+  override def cmd: String = PCommand.HBT.name();
 }
