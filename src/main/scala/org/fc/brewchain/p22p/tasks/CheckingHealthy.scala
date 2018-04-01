@@ -26,6 +26,7 @@ import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 
+import scala.collection.JavaConversions._
 //投票决定当前的节点
 object CheckingHealthy extends SRunner {
   def getName() = "CheckingHealthy"
@@ -37,13 +38,18 @@ object CheckingHealthy extends SRunner {
         def onSuccess(fp: FramePacket) = {
           log.debug("send HBTPZP success:to " + n.uri + ",body=" + fp.getBody)
           val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
-          log.debug("get nodes:" + retpack);
+//          log.debug("get nodes:" + retpack);
           if (retpack.getCurrent == null) {
             log.debug("Node EROR NotFOUND:" + retpack);
             Networks.instance.removePendingNode(n);
           } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
             log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
             Networks.instance.removePendingNode(n);
+          } else {
+            log.debug("get nodes:pendingcount=" + retpack.getPendingsCount);
+            retpack.getPendingsList.map { pn =>
+              Networks.instance.addPendingNode(fromPMNode(pn));
+            }
           }
         }
         def onFailed(e: java.lang.Exception, fp: FramePacket) {

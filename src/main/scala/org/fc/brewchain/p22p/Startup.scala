@@ -15,7 +15,6 @@ object Startup extends SessionModules[Message] {
   @Validate
   def init() {
     System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.url");
-
     log.info("startup:");
 
     LayerNodeTask.initTask();

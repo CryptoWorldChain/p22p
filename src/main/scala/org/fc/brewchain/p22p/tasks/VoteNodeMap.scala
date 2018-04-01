@@ -25,6 +25,7 @@ import com.google.protobuf.Any
 import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.pbft.StateStorage
 import org.fc.brewchain.p22p.pbgens.P22P.PVType
+import onight.tfw.outils.serialize.UUIDGenerator
 
 //投票决定当前的节点
 object VoteNodeMap extends SRunner {
@@ -43,7 +44,8 @@ object VoteNodeMap extends SRunner {
       //    vbase.setMaxVid(value)
       //      vbase.setN(1)
       //      vbase.setV(1);
-
+      vbase.setMessageUid(UUIDGenerator.generate())
+      vbase.setOriginBcuid(NodeInstance.root().bcuid)
       vbase.setFromBcuid(NodeInstance.root.bcuid);
 
       var bits = Networks.instance.node_bits;
@@ -77,10 +79,10 @@ object VoteNodeMap extends SRunner {
       }
       //    NodeInstance.forwardMessage("VOTPZP", vbody.build());
       //vbody.setNodeBitsEnc(bits.toString(16));
-
-      Thread.sleep((Math.random() * 10000).asInstanceOf[Int]);
+      log.debug("Run-----[Sleep]"); //
+      
+      Thread.sleep((Math.random() * 6000).asInstanceOf[Int]);
       Thread.currentThread().setName(oldThreadName);
-      log.debug("Run-----[END]"); //
     } catch {
       case e: Throwable =>
         log.warn("unknow Error:", e)

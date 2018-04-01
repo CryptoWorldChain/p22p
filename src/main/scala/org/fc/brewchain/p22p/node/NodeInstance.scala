@@ -16,6 +16,7 @@ import org.fc.brewchain.p22p.action.PMNodeHelper
 import com.google.protobuf.StringValue
 import com.google.protobuf.ByteString
 import org.brewchain.bcapi.gens.Oentity.OKey
+import org.slf4j.MDC
 
 object NodeInstance extends OLog with PMNodeHelper {
   //  val node_name = NodeHelper.getCurrNodeName
@@ -95,6 +96,11 @@ object NodeInstance extends OLog with PMNodeHelper {
         } catch {
           case e: Throwable =>
             log.warn("unknow Error.", e)
+        } finally {
+          if (NodeInstance.root() != null)
+          {
+            MDC.put("BCUID", StringUtils.abbreviate(NodeInstance.root().bcuid,8))
+          }
         }
       }
     }
@@ -108,6 +114,7 @@ object NodeInstance extends OLog with PMNodeHelper {
 
       Daos.odb.putInfo(NODE_ID_PROP, String.valueOf(v))
       rootnode = rootnode.changeIdx(v)
+      MDC.put("BCUID", StringUtils.abbreviate(NodeInstance.root().bcuid,8))
       syncInfo(rootnode)
       log.debug("changeNode Index=" + v)
       v
@@ -121,7 +128,7 @@ object NodeInstance extends OLog with PMNodeHelper {
   def isLocal(bcuid: String): Boolean = {
     StringUtils.equals(root().bcuid, bcuid);
   }
- 
+
   def isLocal(node: PNode): Boolean = {
     node == root() ||
       StringUtils.equals(root().bcuid, node.bcuid);

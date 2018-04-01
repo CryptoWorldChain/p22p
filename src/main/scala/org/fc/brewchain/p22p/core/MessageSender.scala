@@ -47,7 +47,7 @@ object MessageSender extends NActor with OLog {
   def sendMessage(gcmd: String, body: Message, node: PNode, cb: CallBack[FramePacket]) {
     val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node)
-    log.debug("sendMessage:" + pack)
+    log.debug("sendMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
     sockSender.asyncSend(pack, cb)
   }
 
@@ -57,7 +57,7 @@ object MessageSender extends NActor with OLog {
       appendUid(pack,directBcuid);
       sockSender.post(pack)
     }
-    log.debug("wallMessage:" + pack.getModuleAndCMD+",from="+pack.getFrom())
+    log.debug("wallMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
     Networks.instance.directNodes.map { node =>
       if (directBcuid == null || !StringUtils.equals(directBcuid, node.bcuid)) {
         appendUid(pack, node)
@@ -78,7 +78,7 @@ object MessageSender extends NActor with OLog {
   def postMessage(gcmd: String, body: Message, bcuid: String) {
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack,bcuid);
-    log.debug("postMessage:bcuid:" + pack)
+    log.debug("postMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
     sockSender.post(pack)
   }
 
@@ -86,7 +86,7 @@ object MessageSender extends NActor with OLog {
     val gcmd = frompack.getModuleAndCMD;
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack,frompack.getExtStrProp(PackHeader.PACK_FROM));
-    log.trace("reply_postMessage:bcuid:" + pack)
+    log.trace("reply_postMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
     sockSender.post(pack)
   }
 

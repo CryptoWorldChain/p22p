@@ -19,6 +19,10 @@ object Votes {
     override def decision = major
   }
 
+  case class Undecisible() extends VoteResult {
+    override def decision = None
+  }
+
   case class NotConverge() extends VoteResult {
     override def decision = None
   }
@@ -26,14 +30,14 @@ object Votes {
   class VoteImpl[A, Repr](val coll: SeqLike[A, Repr]) {
 
     final def PBFTVote(choice: (A) => Option[Any] = { x => Some(x) }, total: Int = coll.size): VoteResult = {
-      vote(total * 2 / 3, total)(choice)
+      vote(2.0 / 3.0, total)(choice)
     }
     final def RCPTVote(choice: (A) => Option[Any] = { x => Some(x) }, total: Int = coll.size): VoteResult = {
-      vote(total * 8 / 10, total)(choice)
+      vote(8.0 / 10.0, total)(choice)
     }
 
     final def precentVote(precent: Float, choice: (A) => Option[Any] = { x => Some(x) }, total: Int = coll.size): VoteResult = {
-      vote((coll.size * precent).asInstanceOf[Int],total)(choice)
+      vote(precent, total)(choice)
     }
     private def ConvergeValue(v: Any): VoteResult = {
       v match {
@@ -41,7 +45,7 @@ object Votes {
         case _ => Converge(v)
       }
     }
-    def vote(convCount: Int, total: Int)(choice: (A) => Any): VoteResult = {
+    def vote(convprecent: Double, total: Int)(choice: (A) => Any): VoteResult = {
       val votemap = Map[Any, Int]();
       coll.foreach { cur =>
         val cur_choice = choice(cur)
@@ -50,16 +54,21 @@ object Votes {
           case _ => votemap.+=(cur_choice -> (1))
         }
       }
-      if (votemap.size == 1 && total == convCount) {
+      if (votemap.size == 1 && total == 1) {
         return ConvergeValue(votemap.head._1)
       } else {
         votemap.map(kv => {
-          if (kv._2 >= convCount) {
+          if (kv._2 >= total * convprecent) {
             return ConvergeValue(kv._1)
           }
         })
+        val f=total * (1-convprecent) ;
+        if ( (total - votemap.size) > f && votemap.size > f) {
+          NotConverge()
+        } else {
+          Undecisible()
+        }
       }
-      NotConverge()
     }
   }
   implicit def vote[Repr, A](coll: Repr)(implicit fr: IsSeqLike[Repr]): VoteImpl[fr.A, Repr] = new VoteImpl(fr.conversion(coll))

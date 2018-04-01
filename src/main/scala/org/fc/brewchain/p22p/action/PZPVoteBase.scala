@@ -36,6 +36,8 @@ import org.fc.brewchain.p22p.Daos
 import org.fc.brewchain.p22p.pbft.StateStorage
 import org.fc.brewchain.p22p.pbgens.P22P.PBFTStage
 import org.fc.brewchain.p22p.core.MessageSender
+import org.brewchain.bcapi.utils.PacketIMHelper._
+import org.slf4j.MDC
 
 @NActorProvider
 @Slf4j
@@ -47,7 +49,9 @@ object PZPVoteBase extends PSMPZP[PVBase] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PVBase, handler: CompleteHandler) = {
-    log.info("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState+",V="+pbo.getV+",N="+pbo.getN)
+    MDC.put("MessageID", pbo.getMessageUid)
+    log.info("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid)
+
     var ret = PRetJoin.newBuilder();
     try {
       pbo.getMType match {
@@ -58,8 +62,8 @@ object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with P
             case PBFTStage.REJECT =>
               MessageSender.replyPostMessage(pack, reply);
             case PBFTStage.NOOP =>
-              //do nothing.
-              
+            //do nothing.
+
             case _ =>
               MessageSender.replyWallMessage(pack, reply);
           }
@@ -83,7 +87,12 @@ object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with P
         ret.setRetCode(-3).setRetMessage(t.getMessage)
       }
     } finally {
-      handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+      try {
+        handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+      } finally {
+        MDC.remove("MessageID");
+      }
+
     }
   }
   //  override def getCmds(): Array[String] = Array(PWCommand.LST.name())

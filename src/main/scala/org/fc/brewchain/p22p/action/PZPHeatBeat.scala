@@ -31,6 +31,7 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import org.fc.brewchain.p22p.node.Networks
 
+import org.brewchain.bcapi.utils.PacketIMHelper._
 @NActorProvider
 @Slf4j
 object PZPHeatBeat extends PSMPZP[PSNodeInfo] {
@@ -41,11 +42,25 @@ object PZPHeatBeat extends PSMPZP[PSNodeInfo] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
-    log.debug("onPBPacket::" + pbo)
+//    log.debug("onPBPacket::" + pbo)
+    log.debug("get HBT from:"+pack.getFrom())
     var ret = PRetNodeInfo.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
       ret.setCurrent(toPMNode(NodeInstance.root))
+            val pending = Networks.instance.pendingNodes;
+      val directNodes = Networks.instance.directNodes;
+      log.debug("pending=" + Networks.instance.pendingNodes.size + "::" + Networks.instance.pendingNodes)
+      //      ret.addNodes(toPMNode(NodeInstance.curnode));
+      pending.map { _pn =>
+        log.debug("pending==" + _pn)
+        ret.addPendings(toPMNode(_pn));
+      }
+      directNodes.map { _pn =>
+        log.debug("directnodes==" + _pn)
+        ret.addNodes(toPMNode(_pn));
+      }
+
     } catch {
       case fe: NodeInfoDuplicated => {
         ret.clear();

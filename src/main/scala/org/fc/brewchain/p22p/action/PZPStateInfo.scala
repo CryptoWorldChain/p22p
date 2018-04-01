@@ -37,6 +37,7 @@ import org.fc.brewchain.p22p.pbft.StateStorage
 import org.brewchain.bcapi.gens.Oentity.OValue
 import org.fc.brewchain.p22p.pbgens.P22P.PVBase
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.pbgens.P22P.OPair
 
 @NActorProvider
 @Slf4j
@@ -48,24 +49,28 @@ object PZPStateInfo extends PSMPZP[PSVoteState] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPStateInfoService extends OLog with PBUtils with LService[PSVoteState] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSVoteState, handler: CompleteHandler) = {
-    log.debug("onPBPacket::" + pbo)
+//    log.debug("onPBPacket::" + pbo)
     var ret = PRetVoteState.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
-      val strkey = StateStorage.STR_seq(pbo.getMTypeValue);
+      val strkey = StateStorage.STR_seq(pbo.getTValue);
       Daos.viewstateDB.get(strkey).get match {
         case ov if ov != null =>
           val pb = PVBase.newBuilder().mergeFrom(ov.getExtdata);
           pb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray())))
-          ret.setCur(pb);
-
-          Daos.viewstateDB.listBySecondKey(strkey + "." + pb.getFromBcuid + "." + pb.getN).get match {
+          ret.setCur(OPair.newBuilder().setV(pb).setK(strkey));
+          val v = pbo.getV match {
+            case v if v > 0 => v
+            case _ => pb.getV
+          }
+          log.debug("view state:V=" + v);
+          Daos.viewstateDB.listBySecondKey(strkey + "." + pb.getOriginBcuid + "." + v).get match {
             case ovs if ovs != null =>
               ovs.map { x =>
                 //                ret.setNodes(x$1)
-                val ppb=PVBase.newBuilder().mergeFrom(x.getExtdata);
-                ppb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray())))
-                ret.addNodes(ppb)
+                val ppb = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
+                ppb.setContents(ByteString.copyFrom(Base64.encodeBase64(ppb.getContents.toByteArray())))
+                ret.addNodes(OPair.newBuilder().setV(ppb).setK(new String(x.getKey.getData.toByteArray())))
               }
           }
         case _ =>

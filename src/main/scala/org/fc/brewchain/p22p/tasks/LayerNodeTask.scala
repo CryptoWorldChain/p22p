@@ -15,6 +15,7 @@ import org.fc.brewchain.p22p.pbgens.P22P.PRetJoin
 import java.util.concurrent.ScheduledFuture
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.Networks
+import org.slf4j.MDC
 
 
 //投票决定当前的节点
@@ -29,12 +30,13 @@ object LayerNodeTask extends OLog with Runnable {
     while (!NodeInstance.isReady()) {
       Thread.sleep(1000);
     }
+    
     log.debug("Starting Node Tasks");
     //add myself
     Networks.instance.addPendingNode(NodeInstance.root())
     
     Scheduler.scheduleWithFixedDelay(JoinNetwork, 5, 60, TimeUnit.SECONDS)
-    Scheduler.scheduleWithFixedDelay(CheckingHealthy, 120, 120, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(CheckingHealthy, 120, 10, TimeUnit.SECONDS)
     Scheduler.scheduleWithFixedDelay(VoteNodeMap, 10, 10, TimeUnit.SECONDS)
 
   }

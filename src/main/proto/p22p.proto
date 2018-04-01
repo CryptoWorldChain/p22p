@@ -80,11 +80,12 @@ message PBSwitchNodes{	//交换我所知道的节点信息
 }
 
 enum PBFTStage{
-	PRE_PREPARE = 0;
-	PREPARE = 1;
-	COMMIT = 2;
-	REPLY = 3;
-	NOOP = 4;// do nothing.. still wait for other actions
+	INIT = 0;
+	PRE_PREPARE = 1;
+	PREPARE = 2;
+	COMMIT = 3;
+	REPLY = 4;
+	NOOP = 5;// do nothing.. still wait for other actions
 	REJECT = 99;
 }
 
@@ -100,8 +101,9 @@ message PVBase{
 	uint64 create_time = 6;
 	uint64 last_update_time = 7;
 	bytes contents = 10;
-	
+	string origin_bcuid = 20;//从哪个节点名称来的
 	string message_uid = 30;//消息的uuid
+	
 	string from_bcuid = 31;//从哪个节点名称来的
 	string sign = 100; //对上述数据的签名结果
 }
@@ -113,7 +115,13 @@ message PBVoteNodeIdx{//投票决定节点的idx,80%通过才行
 
 
 message PSVoteState{
-	PVType m_type = 2;//消息类型
+	PVType t = 1;//消息类型
+	int32 v = 2;//状态计数器 
+}
+
+message OPair{
+	string k = 1;//
+	PVBase	v = 2;//当前信息
 }
 
 message PRetVoteState{
@@ -121,7 +129,7 @@ message PRetVoteState{
 	string ret_message = 2;//返回信息
 
 	PVType 	m_type = 3;//消息类型
-	PVBase	cur = 4;//当前信息
-	repeated PVBase	nodes = 5;//所有节点的信息 
+	OPair	cur = 4;//当前信息
+	repeated OPair	nodes = 5;//所有节点的信息 
 }
 
