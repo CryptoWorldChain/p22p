@@ -11,6 +11,7 @@ object Config {
   
   def TICK_CHECK_HEALTHY = 10;
   def TICK_VOTE_MAP = 10; 
+  def TICK_VOTE_WORKER = 1; 
   
   def VOTE_DEBUG:Boolean = {
 //    NodeHelper.getCurrNodeListenOutPort != 5100;

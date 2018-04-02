@@ -38,7 +38,7 @@ object StateStorage extends OLog {
           PVBase.newBuilder().mergeFrom(ov.getExtdata) match {
             case dbpbo if dbpbo.getState == PBFTStage.REPLY =>
               if (System.currentTimeMillis() - dbpbo.getLastUpdateTime < Config.MIN_EPOCH_EACH_VOTE) {
-                log.debug("cannot start next vote: time less than past" + dbpbo.getState + ",V=" + dbpbo.getV+",DIS="+JodaTimeHelper.secondFromNow(dbpbo.getLastUpdateTime));
+                log.debug("cannot start next vote: time less than past" + dbpbo.getState + ",V=" + dbpbo.getV + ",DIS=" + JodaTimeHelper.secondFromNow(dbpbo.getLastUpdateTime));
                 (-1, PBFTStage.REJECT);
               } else {
                 log.debug("getting next vote:" + dbpbo.getState + ",V=" + dbpbo.getV);
@@ -48,7 +48,7 @@ object StateStorage extends OLog {
               log.debug("recover from vote:" + dbpbo.getState + ",lastCreateTime:" + JodaTimeHelper.format(dbpbo.getCreateTime));
               (dbpbo.getV, PBFTStage.PRE_PREPARE)
             case dbpbo =>
-              log.debug("cannot start vote:" + dbpbo.getState + ",LVT=" + JodaTimeHelper.format(dbpbo.getCreateTime) + ",O=" + dbpbo.getOriginBcuid);
+              log.debug("cannot start vote:" + dbpbo.getState + ",past=" + JodaTimeHelper.secondFromNow(dbpbo.getCreateTime) + ",O=" + dbpbo.getOriginBcuid);
               (-1, PBFTStage.REJECT);
           }
         case _ =>
@@ -105,7 +105,7 @@ object StateStorage extends OLog {
                           .setState(PBFTStage.INIT)
                           .build().toByteArray()))
                         .build())
-                    Some(null)
+                    None;
                   case _ =>
                     log.debug("OtherVoteCommit::NotMerge,PS=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid + ",from=" + pbo.getFromBcuid);
                     None;
@@ -127,21 +127,22 @@ object StateStorage extends OLog {
 
   def saveStageV(pbo: PVBase, ov: OValue) {
     val key = STR_seq(pbo) + ".F." + pbo.getV;
-    val dbov = Daos.viewstateDB.get(key).get
+    //    val dbov = Daos.viewstateDB.get(key).get
     log.debug("saveStage:V=" + pbo.getV + ",O=" + pbo.getOriginBcuid)
-    if (dbov != null) {
-      val pb = PVBase.newBuilder().mergeFrom(ov.getExtdata);
-      pb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray()))).setLastUpdateTime(System.currentTimeMillis())
-      log.warn("Already Save Stage!" + dbov + ",pb=" + pb)
-    }
+    //    if (dbov != null) {
+    //      val pb = PVBase.newBuilder().mergeFrom(ov.getExtdata);
+    //      pb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray()))).setLastUpdateTime(System.currentTimeMillis())
+    //      log.warn("Already Save Stage!" + dbov + ",pb=" + pb)
+    //    }
     Daos.viewstateDB.put(STR_seq(pbo) + ".F." + pbo.getV, ov);
   }
 
   def updateLocalViewState(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage): PBFTStage = {
-
     updateNodeStage(pbo, pbo.getState)
-
-    voteNodeStages(pbo) match {
+    makeVote(pbo, ov, newstate)
+  }
+  def makeVote(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage): PBFTStage = {
+    val ret = voteNodeStages(pbo) match {
       case n: Converge if n.decision == pbo.getState =>
         ov.setExtdata(
           ByteString.copyFrom(pbo.toBuilder()
@@ -149,7 +150,6 @@ object StateStorage extends OLog {
             .setLastUpdateTime(System.currentTimeMillis())
             .build().toByteArray()))
         log.debug("Vote::MergeOK,PS=" + pbo.getState + ",New=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid + ",from=" + pbo.getFromBcuid);
-
         Daos.viewstateDB.put(STR_seq(pbo), ov.clone().clearSecondKey().build());
         newstate
       case un: Undecisible =>
@@ -184,7 +184,10 @@ object StateStorage extends OLog {
       case n: Converge =>
         log.warn("unknow ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState);
         PBFTStage.NOOP
+      case _ =>
+        PBFTStage.NOOP
     }
+    ret
   }
   def updateNodeStage(pbo: PVBase, state: PBFTStage): PBFTStage = {
     val strkey = STR_seq(pbo);
@@ -205,20 +208,20 @@ object StateStorage extends OLog {
     val ovs = Daos.viewstateDB.listBySecondKey(strkey + "." + pbo.getOriginBcuid + "." + pbo.getMessageUid + "." + pbo.getV);
     if (ovs.get != null && ovs.get.size() > 0) {
       val reallist = ovs.get.filter { ov => ov.getValue.getDecimals == pbo.getStateValue }.toList;
-      log.debug("get list:size=" + ovs.get.size() + ",state=" + reallist.size + ",state=" + pbo.getState)
-      //      ovs.get.map { x =>  
-      //        val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
-      //        log.debug("-------::DBList:State=" + p.getState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
-      //            + ",F=" + p.getFromBcuid + ",REJRECT="+p.getRejectState + ",KEY=" + new String(x.getKey.getData.toByteArray()))
-      //      }
+      log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
+            ovs.get.map { x =>  
+              val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
+              log.debug("-------::DBList:State=" + p.getState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+                  + ",F=" + p.getFromBcuid + ",REJRECT="+p.getRejectState + ",KEY=" + new String(x.getKey.getData.toByteArray()))
+            }
       //            val l = List("aa", "bb", "cc",  "aa", "aa")
       //            Votes.vote(l).RCPTVote { x => ??? }
       //          println("pbft.vote=" + l.RCPTVote().decision);
       Votes.vote(reallist).PBFTVote({
         x =>
           val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
-          log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
-            + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
+                    log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+                      + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
           if (pbo.getCreateTime - p.getCreateTime > Config.TIMEOUT_STATE_VIEW_RESET) {
             log.debug("Force TIMEOUT node state to My State:" + p.getState + ",My=" + pbo.getState);
             Some(pbo.getState)

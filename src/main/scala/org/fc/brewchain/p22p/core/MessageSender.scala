@@ -78,19 +78,12 @@ object MessageSender extends NActor with OLog {
     sockSender.post(pack)
   }
 
-  def replyPostMessage(frompack: FramePacket, body: Message) {
-    val gcmd = frompack.getModuleAndCMD;
+  def replyPostMessage(gcmd: String,from:String, body: Message) {
+//    val gcmd = frompack.getModuleAndCMD;
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
-    appendUid(pack, frompack.getExtStrProp(PackHeader.PACK_FROM));
+    appendUid(pack, from);//frompack.getExtStrProp(PackHeader.PACK_FROM));
     log.trace("reply_postMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     sockSender.post(pack)
-  }
-
-  def replyWallMessage(frompack: FramePacket, body: Message) {
-    val gcmd = frompack.getModuleAndCMD;
-    //    Networks.instance.pendingNodes
-    log.trace("replyWallMessage:" + body)
-    wallMessageToPending(gcmd, body);
   }
 
   def dropNode(node: PNode) {

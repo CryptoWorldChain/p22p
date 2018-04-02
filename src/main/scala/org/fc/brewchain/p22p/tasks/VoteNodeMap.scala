@@ -40,9 +40,6 @@ object VoteNodeMap extends SRunner {
       val vbody = PBVoteNodeIdx.newBuilder();
       vbase.setState(PBFTStage.PRE_PREPARE)
       vbase.setMType(PVType.VOTE_IDX)
-      //    vbase.setMaxVid(value)
-      //      vbase.setN(1)
-      //      vbase.setV(1);
       vbase.setMessageUid(UUIDGenerator.generate())
       vbase.setOriginBcuid(NodeInstance.root().bcuid)
       vbase.setFromBcuid(NodeInstance.root.bcuid);

@@ -42,6 +42,7 @@ import org.fc.brewchain.p22p.utils.LogHelper
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.bcapi.BCPacket
+import org.fc.brewchain.p22p.pbft.VoteQueue
 
 @NActorProvider
 @Slf4j
@@ -59,36 +60,34 @@ object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with P
     }
 
     log.info("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
-        +",Rejct="+pbo.getRejectState)
+      + ",Rejct=" + pbo.getRejectState)
 
     var ret = PRetJoin.newBuilder();
     try {
       pbo.getMType match {
         case PVType.VOTE_IDX =>
-          
-          val nextstate = StateStorage.vote(pbo);
-          val reply = pbo.toBuilder().setState(nextstate).setFromBcuid(NodeInstance.root().bcuid)
-          .setOldState(pbo.getState);
-          nextstate match {
-            case PBFTStage.REJECT =>
-              reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
-              MessageSender.replyPostMessage(pack, reply.build());
-            case PBFTStage.NOOP =>
-            case PBFTStage.REPLY =>
-              log.info("MergeSuccess!!:V="+pbo.getV+",N="+pbo.getN+",org="+pbo.getOriginBcuid)
-            //do nothing.
-            case _ =>
-              //              MessageSender.replyWallMessage(pack, reply);
-              //              MessageSender.wallMessageToPending(pack.getModuleAndCMD, reply);
-//              val gcmd = pack.getModuleAndCMD;
-//              val repack = BCPacket.buildAsyncFrom(reply, gcmd.substring(0, 3), gcmd.substring(3));
-//              log.debug("wallMessage:" + repack.getModuleAndCMD + ",F=" + repack.getFrom() + ",T=" + repack.getTo())
-              Networks.instance.pendingNodes.map { node =>
-                MessageSender.postMessage(pack.getModuleAndCMD, reply.build(), node.bcuid)
-//                appendUid(pack, node)
-//                sockSender.post(pack)
-              }
-          }
+          VoteQueue.appendInQ(pbo)
+//          
+//          val nextstate = StateStorage.vote(pbo);
+//          if (pbo.getRejectState != PBFTStage.REJECT) {
+//            val reply = pbo.toBuilder().setState(nextstate).setFromBcuid(NodeInstance.root().bcuid)
+//              .setOldState(pbo.getState);
+//            nextstate match {
+//              case PBFTStage.REJECT =>
+//                reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
+//                MessageSender.replyPostMessage(pack.getGlobalCMD,pbo.getFromBcuid, reply.build());
+//              case PBFTStage.NOOP =>
+//              case PBFTStage.REPLY =>
+//                log.info("MergeSuccess!!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
+//              //do nothing.
+//              case _ =>
+//                Networks.instance.pendingNodes.map { node =>
+//                  MessageSender.postMessage(pack.getModuleAndCMD, reply.build(), node.bcuid)
+//                }
+//            }
+//          } else {
+//            log.debug("Reject status will not wall message again");
+//          }
         case _ =>
           log.debug("unknow vote message:type=" + pbo.getMType)
       }

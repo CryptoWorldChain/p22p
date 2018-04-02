@@ -15,9 +15,9 @@ import org.fc.brewchain.p22p.node.router.CircleNR
 
 class Network() extends OLog //
 {
-   val directNodeByName: Map[String, PNode] = Map.empty[String, PNode];
-   val directNodeByIdx: Map[Int, PNode] = Map.empty[Int, PNode];
-   val pendingNodeByName: Map[String, PNode] = Map.empty[String, PNode];
+  val directNodeByName: Map[String, PNode] = Map.empty[String, PNode];
+  val directNodeByIdx: Map[Int, PNode] = Map.empty[Int, PNode];
+  val pendingNodeByName: Map[String, PNode] = Map.empty[String, PNode];
 
   val connectedMap: Map[Int, Map[Int, Int]] = Map.empty[Int, Map[Int, Int]];
 
@@ -39,9 +39,9 @@ class Network() extends OLog //
       None
     }
   }
-  
-   def removeDNode(node: PNode): Option[PNode] = {
-    if (directNodeByName.contains(node.name) ) {
+
+  def removeDNode(node: PNode): Option[PNode] = {
+    if (directNodeByName.contains(node.name)) {
       node_bits = node_bits.clearBit(node.node_idx);
       directNodeByName.remove(node.name)
     } else {
@@ -52,9 +52,6 @@ class Network() extends OLog //
 
   def addPendingNode(node: PNode): Boolean = {
     this.synchronized {
-      //      if (node.name == root.name) {
-      //        throw new NodeInfoDuplicated("same node with currnt node" + node.name + "@" + root.name);
-      //      }
       if (directNodeByName.contains(node.name)) {
         log.debug("directNode exists in DirectNode name=" + node.name);
         false
@@ -68,10 +65,9 @@ class Network() extends OLog //
       }
     }
   }
-  
-    def removePendingNode(node: PNode): Boolean = {
+
+  def removePendingNode(node: PNode): Boolean = {
     this.synchronized {
-      //      }
       if (!pendingNodeByName.contains(node.name)) {
         false
       } else {
@@ -100,15 +96,6 @@ class Network() extends OLog //
         //      log.debug("map="+connectedMap)
       }
   }
-  //  def isLocal() = (NodeInstance.curnode == this)
-  //  override def processMessage(gcmd: String, msg: Message, from: PNode): Unit = {
-  //    if (isLocal()) {
-  //      log.debug("proc Local message");
-  //    } else {
-  //      log.debug("need to Send Message");
-  //      MessageSender.postMessage(gcmd, msg, this); //(gcmd, body, node, cb)
-  //    }
-  //  }
 }
 object Networks {
   val instance: Network = new Network();

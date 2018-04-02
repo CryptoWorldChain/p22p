@@ -17,6 +17,7 @@ import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.Networks
 import org.slf4j.MDC
 import org.fc.brewchain.p22p.utils.Config
+import org.fc.brewchain.p22p.pbft.VoteWorker
 
 //投票决定当前的节点
 object LayerNodeTask extends OLog with Runnable {
@@ -38,6 +39,7 @@ object LayerNodeTask extends OLog with Runnable {
     Scheduler.scheduleWithFixedDelay(JoinNetwork, 5, 60, TimeUnit.SECONDS)
     Scheduler.scheduleWithFixedDelay(CheckingHealthy, 10, Config.TICK_CHECK_HEALTHY, TimeUnit.SECONDS)
     Scheduler.scheduleWithFixedDelay(VoteNodeMap, 10, Config.TICK_VOTE_MAP, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(VoteWorker, 10, Config.TICK_VOTE_WORKER, TimeUnit.SECONDS)
 
   }
 //  lazy val currPMNodeInfo = PMNodeInfo.newBuilder().setAddress(NodeInstance.root.address) //
