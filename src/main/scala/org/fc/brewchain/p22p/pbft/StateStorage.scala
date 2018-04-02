@@ -145,14 +145,20 @@ object StateStorage extends OLog {
   def makeVote(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage): PBFTStage = {
     val ret = voteNodeStages(pbo) match {
       case n: Converge if n.decision == pbo.getState =>
-        ov.setExtdata(
-          ByteString.copyFrom(pbo.toBuilder()
-            .setState(newstate)
-            .setLastUpdateTime(System.currentTimeMillis())
-            .build().toByteArray()))
-        log.debug("Vote::MergeOK,PS=" + pbo.getState + ",New=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid + ",from=" + pbo.getFromBcuid);
-        Daos.viewstateDB.put(STR_seq(pbo), ov.clone().clearSecondKey().build());
-        newstate
+        Daos.viewstateDB.get(STR_seq(pbo)).get match {
+          case ov if ov != null && PVBase.newBuilder().mergeFrom(ov.getExtdata).getState == newstate =>
+              PBFTStage.DUPLICATE;
+          case _ =>
+            ov.setExtdata(
+              ByteString.copyFrom(pbo.toBuilder()
+                .setState(newstate)
+                .setLastUpdateTime(System.currentTimeMillis())
+                .build().toByteArray()))
+            log.debug("Vote::MergeOK,PS=" + pbo.getState + ",New=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid + ",from=" + pbo.getFromBcuid);
+            Daos.viewstateDB.put(STR_seq(pbo), ov.clone().clearSecondKey().build());
+            newstate
+        }
+
       case un: Undecisible =>
         log.debug("Vote::Undecisible:State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
         PBFTStage.NOOP
@@ -203,7 +209,7 @@ object StateStorage extends OLog {
     Daos.viewstateDB.put(strkey + "." + pbo.getFromBcuid + "." + pbo.getMessageUid + "." + pbo.getV + "." + newpbo.getStateValue, ov.build());
     state
   }
-  def outputList(ovs: List[OPair]):Unit = {
+  def outputList(ovs: List[OPair]): Unit = {
     ovs.map { x =>
       val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
       log.debug("-------::DBList:State=" + p.getState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
@@ -216,7 +222,7 @@ object StateStorage extends OLog {
     if (ovs.get != null && ovs.get.size() > 0) {
       val reallist = ovs.get.filter { ov => ov.getValue.getDecimals == pbo.getStateValue }.toList;
       log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
-//      outputList(ovs.get)
+      //      outputList(ovs.get)
       //      ovs.get.map { x =>
       //        val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
       //        log.debug("-------::DBList:State=" + p.getState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
@@ -229,8 +235,8 @@ object StateStorage extends OLog {
       Votes.vote(reallist).PBFTVote({
         x =>
           val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
-//          log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
-//            + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
+          //          log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+          //            + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
           if (pbo.getCreateTime - p.getCreateTime > Config.TIMEOUT_STATE_VIEW_RESET) {
             log.debug("Force TIMEOUT node state to My State:" + p.getState + ",My=" + pbo.getState);
             Some(pbo.getState)

@@ -72,6 +72,8 @@ object VoteWorker extends SRunner with LogHelper {
           case PBFTStage.REPLY =>
             StateStorage.saveStageV(pbo, ov.build());
             log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
+          case PBFTStage.DUPLICATE =>
+            log.info("Duplicated Vote Message!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
           case s @ _ =>
             log.debug("Noop for state:" + newstate + ",voteresult=" + s)
 

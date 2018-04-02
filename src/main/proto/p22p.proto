@@ -86,6 +86,7 @@ enum PBFTStage{
 	COMMIT = 3;
 	REPLY = 4;
 	NOOP = 5;// do nothing.. still wait for other actions
+	DUPLICATE = 6;//重复消息
 	REJECT = 99;
 }
 
