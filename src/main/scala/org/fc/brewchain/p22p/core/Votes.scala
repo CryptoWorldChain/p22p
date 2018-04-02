@@ -62,8 +62,8 @@ object Votes {
             return ConvergeValue(kv._1)
           }
         })
-        val f=total * (1-convprecent) ;
-        if ( (total - votemap.size) > f && votemap.size > f) {
+        val f=(total * (1-convprecent) );
+        if (total == votemap.size ||((total - votemap.size) > f && votemap.size > f&&votemap.size>total/2)) {
           NotConverge()
         } else {
           Undecisible()

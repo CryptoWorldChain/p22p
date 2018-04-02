@@ -1,4 +1,4 @@
-package org.fc.brewchain.xdn
+package org.fc.brewchain.p22p.action
 
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -25,13 +25,14 @@ import org.fc.brewchain.p22p.pbgens.P22P.PCommand
 import org.fc.brewchain.p22p.node.NodeInstance
 import java.net.URL
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
-import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
 import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import org.fc.brewchain.p22p.node.Networks
 
 import org.brewchain.bcapi.utils.PacketIMHelper._
+import org.fc.brewchain.p22p.utils.LogHelper
+
 @NActorProvider
 @Slf4j
 object PZPHeatBeat extends PSMPZP[PSNodeInfo] {
@@ -40,7 +41,7 @@ object PZPHeatBeat extends PSMPZP[PSNodeInfo] {
 
 //
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
-object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] with PMNodeHelper {
+object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] with PMNodeHelper with LogHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
 //    log.debug("onPBPacket::" + pbo)
     log.debug("get HBT from:"+pack.getFrom())
@@ -48,7 +49,7 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
     try {
       //       pbo.getMyInfo.getNodeName
       ret.setCurrent(toPMNode(NodeInstance.root))
-            val pending = Networks.instance.pendingNodes;
+      val pending = Networks.instance.pendingNodes;
       val directNodes = Networks.instance.directNodes;
       log.debug("pending=" + Networks.instance.pendingNodes.size + "::" + Networks.instance.pendingNodes)
       //      ret.addNodes(toPMNode(NodeInstance.curnode));

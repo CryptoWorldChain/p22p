@@ -19,6 +19,8 @@ import org.fc.brewchain.p22p.node.Networks
 import com.google.protobuf.MessageOrBuilder
 
 import org.brewchain.bcapi.utils.PacketIMHelper._
+import scala.collection.TraversableLike
+
 @NActorProvider
 object MessageSender extends NActor with OLog {
 
@@ -47,25 +49,19 @@ object MessageSender extends NActor with OLog {
   def sendMessage(gcmd: String, body: Message, node: PNode, cb: CallBack[FramePacket]) {
     val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node)
-    log.debug("sendMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
+    log.debug("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     sockSender.asyncSend(pack, cb)
   }
 
-  def wallMessage(gcmd: String, body: Message, directBcuid: String = null) {
+  def wallMessageToPending(gcmd: String, body: Message) {
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
-    if (directBcuid != null) {
-      appendUid(pack,directBcuid);
+    log.debug("wallMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
+    Networks.instance.pendingNodes.map { node =>
+      appendUid(pack, node)
       sockSender.post(pack)
     }
-    log.debug("wallMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
-    Networks.instance.directNodes.map { node =>
-      if (directBcuid == null || !StringUtils.equals(directBcuid, node.bcuid)) {
-        appendUid(pack, node)
-        sockSender.post(pack)
-      }
-    }
 
-//    log.debug("wallMessage.OK:" + pack.getModuleAndCMD)
+    //    log.debug("wallMessage.OK:" + pack.getModuleAndCMD)
   }
 
   def postMessage(gcmd: String, body: Message, node: PNode) {
@@ -77,23 +73,24 @@ object MessageSender extends NActor with OLog {
 
   def postMessage(gcmd: String, body: Message, bcuid: String) {
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
-    appendUid(pack,bcuid);
-    log.debug("postMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
+    appendUid(pack, bcuid);
+    log.debug("postMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     sockSender.post(pack)
   }
 
   def replyPostMessage(frompack: FramePacket, body: Message) {
     val gcmd = frompack.getModuleAndCMD;
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
-    appendUid(pack,frompack.getExtStrProp(PackHeader.PACK_FROM));
-    log.trace("reply_postMessage:" + pack.getModuleAndCMD+",F="+pack.getFrom()+",T="+ pack.getTo())
+    appendUid(pack, frompack.getExtStrProp(PackHeader.PACK_FROM));
+    log.trace("reply_postMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     sockSender.post(pack)
   }
 
   def replyWallMessage(frompack: FramePacket, body: Message) {
     val gcmd = frompack.getModuleAndCMD;
+    //    Networks.instance.pendingNodes
     log.trace("replyWallMessage:" + body)
-    wallMessage(gcmd, body, frompack.getExtStrProp(PackHeader.PACK_FROM));
+    wallMessageToPending(gcmd, body);
   }
 
   def dropNode(node: PNode) {

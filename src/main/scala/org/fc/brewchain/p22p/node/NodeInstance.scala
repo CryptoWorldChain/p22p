@@ -17,8 +17,9 @@ import com.google.protobuf.StringValue
 import com.google.protobuf.ByteString
 import org.brewchain.bcapi.gens.Oentity.OKey
 import org.slf4j.MDC
+import org.fc.brewchain.p22p.utils.LogHelper
 
-object NodeInstance extends OLog with PMNodeHelper {
+object NodeInstance extends OLog with PMNodeHelper with LogHelper{
   //  val node_name = NodeHelper.getCurrNodeName
   val NODE_ID_PROP = "org.bc.node.id"
   val PROP_NODE_INFO = "zp.bc.node.info";
@@ -99,7 +100,7 @@ object NodeInstance extends OLog with PMNodeHelper {
         } finally {
           if (NodeInstance.root() != null)
           {
-            MDC.put("BCUID", StringUtils.abbreviate(NodeInstance.root().bcuid,8))
+            MDCSetBCUID()
           }
         }
       }
@@ -114,7 +115,7 @@ object NodeInstance extends OLog with PMNodeHelper {
 
       Daos.odb.putInfo(NODE_ID_PROP, String.valueOf(v))
       rootnode = rootnode.changeIdx(v)
-      MDC.put("BCUID", StringUtils.abbreviate(NodeInstance.root().bcuid,8))
+      MDCSetBCUID()
       syncInfo(rootnode)
       log.debug("changeNode Index=" + v)
       v

@@ -1,4 +1,4 @@
-package org.fc.brewchain.xdn
+package org.fc.brewchain.p22p.action
 
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -25,7 +25,6 @@ import org.fc.brewchain.p22p.pbgens.P22P.PCommand
 import org.fc.brewchain.p22p.node.NodeInstance
 import java.net.URL
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
-import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
 import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo

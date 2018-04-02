@@ -1,4 +1,4 @@
-package org.fc.brewchain.xdn
+package org.fc.brewchain.p22p.action
 
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
@@ -25,7 +25,6 @@ import org.fc.brewchain.p22p.pbgens.P22P.PCommand
 import org.fc.brewchain.p22p.node.NodeInstance
 import java.net.URL
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
-import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
 import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
@@ -49,11 +48,15 @@ object PZPStateInfo extends PSMPZP[PSVoteState] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPStateInfoService extends OLog with PBUtils with LService[PSVoteState] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSVoteState, handler: CompleteHandler) = {
-//    log.debug("onPBPacket::" + pbo)
+    //    log.debug("onPBPacket::" + pbo)
     var ret = PRetVoteState.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
-      val strkey = StateStorage.STR_seq(pbo.getTValue);
+      val strkey = pbo.getV match {
+        case v if v > 0 => StateStorage.STR_seq(pbo.getTValue) + ".F." + v
+        case _ => StateStorage.STR_seq(pbo.getTValue)
+      }
+
       Daos.viewstateDB.get(strkey).get match {
         case ov if ov != null =>
           val pb = PVBase.newBuilder().mergeFrom(ov.getExtdata);
@@ -64,7 +67,7 @@ object PZPStateInfoService extends OLog with PBUtils with LService[PSVoteState] 
             case _ => pb.getV
           }
           log.debug("view state:V=" + v);
-          Daos.viewstateDB.listBySecondKey(strkey + "." + pb.getOriginBcuid + "." + v).get match {
+          Daos.viewstateDB.listBySecondKey(StateStorage.STR_seq(pbo.getTValue) + "." + pb.getOriginBcuid +"."+pb.getMessageUid+ "." + v).get match {
             case ovs if ovs != null =>
               ovs.map { x =>
                 //                ret.setNodes(x$1)

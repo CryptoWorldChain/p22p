@@ -21,12 +21,11 @@ import org.fc.brewchain.bcapi.crypto.BitMap
 import org.fc.brewchain.p22p.pbgens.P22P.PVBase
 import org.fc.brewchain.p22p.pbgens.P22P.PBFTStage
 import org.fc.brewchain.p22p.node.Networks
-import com.google.protobuf.Any
 import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.pbft.StateStorage
 import org.fc.brewchain.p22p.pbgens.P22P.PVType
 import onight.tfw.outils.serialize.UUIDGenerator
-
+import org.fc.brewchain.p22p.utils.Config
 //投票决定当前的节点
 object VoteNodeMap extends SRunner {
   def getName() = "VoteNodeMap"
@@ -47,7 +46,7 @@ object VoteNodeMap extends SRunner {
       vbase.setMessageUid(UUIDGenerator.generate())
       vbase.setOriginBcuid(NodeInstance.root().bcuid)
       vbase.setFromBcuid(NodeInstance.root.bcuid);
-
+      vbase.setLastUpdateTime(System.currentTimeMillis())
       var bits = Networks.instance.node_bits;
 
       Networks.instance.pendingNodes.map(n =>
@@ -57,9 +56,8 @@ object VoteNodeMap extends SRunner {
           bits = bits.setBit(n.try_node_idx);
           vbody.addNodes(toPMNode(n));
         })
-
+      
       vbody.setNodeBitsEnc(BitMap.hexToMapping(bits))
-
       vbase.setContents(toByteSting(vbody))
       //      vbase.addVoteContents(Any.pack(vbody.build()))
       if (Networks.instance.node_bits.bitCount <= 0) {
@@ -73,6 +71,7 @@ object VoteNodeMap extends SRunner {
           val vbuild = vbase.build();
           Networks.instance.pendingNodes.map(n =>
             {
+              log.debug("post VoteMap to:bcuid=" + n.bcuid+",from="+n.getName+",msgid="+vbuild.getMessageUid);
               MessageSender.postMessage("VOTPZP", vbuild, n)
             })
         }
@@ -80,12 +79,12 @@ object VoteNodeMap extends SRunner {
       //    NodeInstance.forwardMessage("VOTPZP", vbody.build());
       //vbody.setNodeBitsEnc(bits.toString(16));
       log.debug("Run-----[Sleep]"); //
-      
-      Thread.sleep((Math.random() * 6000).asInstanceOf[Int]);
+
+      Thread.sleep((Math.random() * (Config.MAX_VOTE_SLEEP_MS-Config.MIN_VOTE_SLEEP_MS)+Config.MIN_VOTE_SLEEP_MS).asInstanceOf[Int]);
       Thread.currentThread().setName(oldThreadName);
     } catch {
       case e: Throwable =>
-        log.warn("unknow Error:", e)
+        log.warn("unknow Error:" + e.getMessage, e)
     }
   }
   //Scheduler.scheduleWithFixedDelay(new Runnable, initialDelay, delay, unit)

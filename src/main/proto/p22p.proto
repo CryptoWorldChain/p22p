@@ -100,6 +100,8 @@ message PVBase{
 	uint32 n = 5;// number
 	uint64 create_time = 6;
 	uint64 last_update_time = 7;
+	PBFTStage old_state = 8 ;//上次状态
+	PBFTStage reject_state = 9 ;//上次状态
 	bytes contents = 10;
 	string origin_bcuid = 20;//从哪个节点名称来的
 	string message_uid = 30;//消息的uuid
