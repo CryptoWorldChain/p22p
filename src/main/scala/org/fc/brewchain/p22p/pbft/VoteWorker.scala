@@ -43,7 +43,7 @@ object VoteWorker extends SRunner with LogHelper {
   def makeVote(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage) = {
     MDCSetMessageID(pbo.getMessageUid)
 
-    log.debug("makeVote:State=" + pbo.getState + ",newstate=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
+    log.debug("makeVote:State=" + pbo.getState + ",trystate=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
     val reply = pbo.toBuilder().setState(newstate)
       .setFromBcuid(NodeInstance.root().bcuid)
       .setOldState(pbo.getState);
@@ -53,9 +53,13 @@ object VoteWorker extends SRunner with LogHelper {
         log.debug("Vote::Move TO Next=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
         wallMessage(reply.build());
       //        PBFTStage.PREPARE
-      case PBFTStage.REPLY =>
-        StateStorage.saveStageV(pbo, ov.build());
-        log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
+      case PBFTStage.REJECT =>
+        reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
+        //        log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
+        MessageSender.replyPostMessage("VOTPZP", pbo.getFromBcuid, reply.build());
+      //      case PBFTStage.REPLY =>
+      //        StateStorage.saveStageV(pbo, ov.build());
+      //        log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
       case _ =>
         StateStorage.makeVote(pbo, ov, newstate) match {
           case PBFTStage.COMMIT => //|| s == PBFTStage.REPLY =>
@@ -65,8 +69,12 @@ object VoteWorker extends SRunner with LogHelper {
             log.debug("Vote::Reject =" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
             reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
             MessageSender.replyPostMessage("VOTPZP", pbo.getFromBcuid, reply.build());
+          case PBFTStage.REPLY =>
+            StateStorage.saveStageV(pbo, ov.build());
+            log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
           case s @ _ =>
             log.debug("Noop for state:" + newstate + ",voteresult=" + s)
+
         }
     }
   }

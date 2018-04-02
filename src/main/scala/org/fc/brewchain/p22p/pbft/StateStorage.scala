@@ -14,6 +14,7 @@ import org.fc.brewchain.p22p.pbgens.P22P.PVType
 import org.fc.brewchain.p22p.pbgens.P22P.PVBaseOrBuilder
 import org.fc.brewchain.bcapi.JodaTimeHelper
 import org.brewchain.bcapi.gens.Oentity.OValue
+import org.brewchain.bcapi.gens.Oentity.OPair
 import java.util.ArrayList
 import scala.language.implicitConversions
 import scala.collection.JavaConversions._
@@ -202,26 +203,34 @@ object StateStorage extends OLog {
     Daos.viewstateDB.put(strkey + "." + pbo.getFromBcuid + "." + pbo.getMessageUid + "." + pbo.getV + "." + newpbo.getStateValue, ov.build());
     state
   }
-
+  def outputList(ovs: List[OPair]):Unit = {
+    ovs.map { x =>
+      val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
+      log.debug("-------::DBList:State=" + p.getState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+        + ",F=" + p.getFromBcuid + ",REJRECT=" + p.getRejectState + ",KEY=" + new String(x.getKey.getData.toByteArray()))
+    }
+  }
   def voteNodeStages(pbo: PVBase): VoteResult = {
     val strkey = STR_seq(pbo);
     val ovs = Daos.viewstateDB.listBySecondKey(strkey + "." + pbo.getOriginBcuid + "." + pbo.getMessageUid + "." + pbo.getV);
     if (ovs.get != null && ovs.get.size() > 0) {
       val reallist = ovs.get.filter { ov => ov.getValue.getDecimals == pbo.getStateValue }.toList;
       log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
-            ovs.get.map { x =>  
-              val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
-              log.debug("-------::DBList:State=" + p.getState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
-                  + ",F=" + p.getFromBcuid + ",REJRECT="+p.getRejectState + ",KEY=" + new String(x.getKey.getData.toByteArray()))
-            }
+//      outputList(ovs.get)
+      //      ovs.get.map { x =>
+      //        val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
+      //        log.debug("-------::DBList:State=" + p.getState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+      //          + ",F=" + p.getFromBcuid + ",REJRECT=" + p.getRejectState + ",KEY=" + new String(x.getKey.getData.toByteArray()))
+      //      }
+      //      outpu
       //            val l = List("aa", "bb", "cc",  "aa", "aa")
       //            Votes.vote(l).RCPTVote { x => ??? }
       //          println("pbft.vote=" + l.RCPTVote().decision);
       Votes.vote(reallist).PBFTVote({
         x =>
           val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
-                    log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
-                      + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
+//          log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+//            + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
           if (pbo.getCreateTime - p.getCreateTime > Config.TIMEOUT_STATE_VIEW_RESET) {
             log.debug("Force TIMEOUT node state to My State:" + p.getState + ",My=" + pbo.getState);
             Some(pbo.getState)
