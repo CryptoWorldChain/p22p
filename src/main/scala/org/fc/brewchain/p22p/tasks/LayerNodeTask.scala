@@ -18,6 +18,7 @@ import org.fc.brewchain.p22p.node.Networks
 import org.slf4j.MDC
 import org.fc.brewchain.p22p.utils.Config
 import org.fc.brewchain.p22p.pbft.VoteWorker
+import org.fc.brewchain.p22p.Daos
 
 //投票决定当前的节点
 object LayerNodeTask extends OLog with Runnable {
@@ -32,7 +33,7 @@ object LayerNodeTask extends OLog with Runnable {
       Thread.sleep(1000);
     }
     
-    log.debug("Starting Node Tasks");
+    log.debug("Starting Node Tasks, DBProvider="+Daos.bdbprovider);
     //add myself
     Networks.instance.addPendingNode(NodeInstance.root())
     

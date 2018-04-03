@@ -30,13 +30,13 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.p22p.pbgens.P22P.PSVoteState
-import org.fc.brewchain.p22p.pbgens.P22P.PRetVoteState
 import org.fc.brewchain.p22p.Daos
 import org.fc.brewchain.p22p.pbft.StateStorage
 import org.brewchain.bcapi.gens.Oentity.OValue
 import org.fc.brewchain.p22p.pbgens.P22P.PVBase
 import com.google.protobuf.ByteString
-import org.fc.brewchain.p22p.pbgens.P22P.OPair
+import org.fc.brewchain.p22p.pbgens.P22P.PRetVoteState
+import org.fc.brewchain.p22p.pbgens.P22P.NodeStateInfo
 
 @NActorProvider
 @Slf4j
@@ -61,7 +61,7 @@ object PZPStateInfoService extends OLog with PBUtils with LService[PSVoteState] 
         case ov if ov != null =>
           val pb = PVBase.newBuilder().mergeFrom(ov.getExtdata);
           pb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray())))
-          ret.setCur(OPair.newBuilder().setV(pb).setK(strkey));
+          ret.setCur(NodeStateInfo.newBuilder().setV(pb).setK(strkey));
           val v = pbo.getV match {
             case v if v > 0 => v
             case _ => pb.getV
@@ -73,7 +73,7 @@ object PZPStateInfoService extends OLog with PBUtils with LService[PSVoteState] 
                 //                ret.setNodes(x$1)
                 val ppb = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata);
                 ppb.setContents(ByteString.copyFrom(Base64.encodeBase64(ppb.getContents.toByteArray())))
-                ret.addNodes(OPair.newBuilder().setV(ppb).setK(new String(x.getKey.getData.toByteArray())))
+                ret.addNodes(NodeStateInfo.newBuilder().setV(ppb).setK(new String(x.getKey.getData.toByteArray())))
               }
           }
         case _ =>

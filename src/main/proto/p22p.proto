@@ -92,18 +92,23 @@ enum PBFTStage{
 
 enum PVType{
 	VOTE_IDX = 0;//投票pending 的节点
+	VIEW_CHANGE = 1; // can make snapshot
 }
+
+
 message PVBase{
 	PBFTStage state = 1 ;//状态
 	PVType m_type = 2;//消息类型
 	uint32 v = 3;//该消息类型对应的view_id序列
 	uint32 max_vid = 4;//最大的id
-	uint32 n = 5;// number
+	uint32 n = 5;// 参与投票的节点数
 	uint64 create_time = 6;
 	uint64 last_update_time = 7;
 	PBFTStage old_state = 8 ;//上次状态
 	PBFTStage reject_state = 9 ;//上次状态
-	bytes contents = 10;
+	bytes contents = 10; //具体的内容
+	uint32 store_num = 11;// 为了支持快照定义的版本
+	uint32 view_counter = 12;//计数器,为快照准备
 	string origin_bcuid = 20;//从哪个节点名称来的
 	string message_uid = 30;//消息的uuid
 	
@@ -117,12 +122,19 @@ message PBVoteNodeIdx{//投票决定节点的idx,80%通过才行
 }
 
 
+message PBVoteViewChange{//投票决定节点的idx,80%通过才行
+	uint32 v = 1;//当前的v
+	uint32 view_counter = 2;//counter必须匹配才行
+	uint32 store_num = 3;// 为了支持快照定义的版本
+}
+
+
 message PSVoteState{
 	PVType t = 1;//消息类型
 	int32 v = 2;//状态计数器 
 }
 
-message OPair{
+message NodeStateInfo{
 	string k = 1;//
 	PVBase	v = 2;//当前信息
 }
@@ -132,7 +144,7 @@ message PRetVoteState{
 	string ret_message = 2;//返回信息
 
 	PVType 	m_type = 3;//消息类型
-	OPair	cur = 4;//当前信息
-	repeated OPair	nodes = 5;//所有节点的信息 
+	NodeStateInfo	cur = 4;//当前信息
+	repeated NodeStateInfo	nodes = 5;//所有节点的信息 
 }
 

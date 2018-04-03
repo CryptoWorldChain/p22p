@@ -11,7 +11,6 @@ import java.util.concurrent.TimeUnit
 object VoteQueue extends LogHelper {
 
   val inQ = new LinkedBlockingQueue[(PVBase, OValue.Builder, PBFTStage)]();
-
   val outQ = new ConcurrentLinkedQueue[PVBase]();
 
   def appendInQ(pbo: PVBase) = {
@@ -61,7 +60,6 @@ object VoteQueue extends LogHelper {
     outQ.offer(PVBase.newBuilder().build())
     println(inQ.size())
     println(outQ.size())
-
   }
 
   def appendOutQ(pbo: PVBase) = {

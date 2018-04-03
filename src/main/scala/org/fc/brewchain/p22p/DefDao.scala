@@ -27,7 +27,7 @@ abstract class PSMPZP[T <: Message] extends SessionModules[T] with PBUtils with 
 
 @NActorProvider
 @Slf4j
-object Daos extends PSMPZP[Message] with ActorService   {
+object Daos extends PSMPZP[Message] with ActorService {
 
   @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSP22p])
   @BeanProperty
@@ -36,13 +36,11 @@ object Daos extends PSMPZP[Message] with ActorService   {
   @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSViewStateStorage])
   @BeanProperty
   var viewstateDB: ODBSupport = null
-  
-  
-  @ActorRequire(name="bdb_provider",scope="global")
-  @BeanProperty
-  var bdbprovider:StoreServiceProvider = null;
 
-  
+  @ActorRequire(name = "bdb_provider", scope = "global")
+  @BeanProperty
+  var bdbprovider: StoreServiceProvider = null;
+
   def setOdb(daodb: DomainDaoSupport) {
     if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
       odb = daodb.asInstanceOf[ODBSupport];
@@ -50,7 +48,7 @@ object Daos extends PSMPZP[Message] with ActorService   {
       log.warn("cannot set odb ODBSupport from:" + daodb);
     }
   }
-   def setViewstateDB(daodb: DomainDaoSupport) {
+  def setViewstateDB(daodb: DomainDaoSupport) {
     if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
       viewstateDB = daodb.asInstanceOf[ODBSupport];
     } else {
@@ -58,8 +56,9 @@ object Daos extends PSMPZP[Message] with ActorService   {
     }
   }
   def isDbReady(): Boolean = {
-    return odb != null && odb.getDaosupport.isInstanceOf[ODBSupport]&&
-    viewstateDB != null && viewstateDB.getDaosupport.isInstanceOf[ODBSupport];
+    return odb != null && odb.getDaosupport.isInstanceOf[ODBSupport] &&
+      viewstateDB != null && viewstateDB.getDaosupport.isInstanceOf[ODBSupport] &&
+      bdbprovider != null;
   }
 
   @BeanProperty

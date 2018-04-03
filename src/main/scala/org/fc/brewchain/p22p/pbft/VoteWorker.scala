@@ -30,6 +30,8 @@ import org.fc.brewchain.p22p.utils.LogHelper
 import org.fc.brewchain.p22p.tasks.SRunner
 import org.fc.brewchain.p22p.core.MessageSender
 import org.fc.brewchain.p22p.node.Networks
+import onight.tfw.outils.serialize.UUIDGenerator
+import org.fc.brewchain.p22p.pbgens.P22P.PBVoteViewChange
 
 object VoteWorker extends SRunner with LogHelper {
 
@@ -40,17 +42,61 @@ object VoteWorker extends SRunner with LogHelper {
       MessageSender.postMessage("VOTPZP", pbo, node.bcuid)
     }
   }
-  def makeVote(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage) = {
-    MDCSetMessageID(pbo.getMessageUid)
 
-    log.debug("makeVote:State=" + pbo.getState + ",trystate=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
+  def voteViewChange(pbo1: PVBase) = {
+    log.info("try start voteViewChange");
+    if (StringUtils.equals(pbo1.getOriginBcuid, NodeInstance.root().bcuid)) {
+      val vbase = PVBase.newBuilder();
+      vbase.setState(PBFTStage.PRE_PREPARE)
+      vbase.setV(pbo1.getV + 1)
+      vbase.setN(pbo1.getN)
+      vbase.setMType(PVType.VIEW_CHANGE).setStoreNum(pbo1.getStoreNum + 1).setViewCounter(0)
+      vbase.setMessageUid(UUIDGenerator.generate())
+      vbase.setOriginBcuid(NodeInstance.root().bcuid)
+      vbase.setFromBcuid(NodeInstance.root.bcuid);
+      vbase.setCreateTime(System.currentTimeMillis())
+      vbase.setLastUpdateTime(vbase.getCreateTime)
+      vbase.setContents(toByteSting(PBVoteViewChange.newBuilder().setStoreNum(pbo1.getStoreNum + 1)
+        .setViewCounter(0).setV(vbase.getV)));
+      val ov = Daos.viewstateDB.get(StateStorage.STR_seq(vbase)).get match {
+        case ov if ov == null =>
+          OValue.newBuilder();
+        case ov if ov != null =>
+          val pbdb = PVBase.newBuilder().mergeFrom(ov.getExtdata)
+          if (System.currentTimeMillis() - pbdb.getLastUpdateTime < Config.MIN_EPOCH_EACH_VOTE) {
+            null
+          } else {
+            ov.toBuilder()
+          }
+        case _ =>
+          null;
+      }
+      if (ov != null) {
+        Daos.viewstateDB.put(StateStorage.STR_seq(vbase), ov
+          .setExtdata(
+            ByteString.copyFrom(vbase.build().toByteArray())).clearSecondKey().build())
+        wallMessage(vbase.build())
+      }
+    }
+  }
+  def makeVote(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage) = {
+    MDCSetMessageID(pbo.getMType+"."+pbo.getMessageUid)
+
+    implicit val dm = pbo.getMType match {
+      case PVType.VOTE_IDX =>
+        DMVotingNodeBits
+      case PVType.VIEW_CHANGE =>
+        DMViewChange
+      case _ => null;
+    }
+    log.debug("makeVote:State=" + pbo.getState + ",trystate=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid);
     val reply = pbo.toBuilder().setState(newstate)
       .setFromBcuid(NodeInstance.root().bcuid)
       .setOldState(pbo.getState);
 
     newstate match {
       case PBFTStage.PREPARE =>
-        log.debug("Vote::Move TO Next=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
+        log.debug("Vote::Move TO Next=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",=O=" + pbo.getOriginBcuid);
         wallMessage(reply.build());
       //        PBFTStage.PREPARE
       case PBFTStage.REJECT =>
@@ -63,17 +109,23 @@ object VoteWorker extends SRunner with LogHelper {
       case _ =>
         StateStorage.makeVote(pbo, ov, newstate) match {
           case PBFTStage.COMMIT => //|| s == PBFTStage.REPLY =>
-            log.debug("Vote::Move TO Next=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
+            log.debug("Vote::Move TO Next=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid);
             wallMessage(reply.build())
           case PBFTStage.REJECT =>
-            log.debug("Vote::Reject =" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",org_bcuid=" + pbo.getOriginBcuid);
+            log.debug("Vote::Reject =" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid);
             reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
             MessageSender.replyPostMessage("VOTPZP", pbo.getFromBcuid, reply.build());
           case PBFTStage.REPLY =>
             StateStorage.saveStageV(pbo, ov.build());
-            log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
+            log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",OF=" + pbo.getOriginBcuid)
+            if (pbo.getViewCounter >= Config.NUM_VIEWS_EACH_SNAPSHOT && pbo.getMType != PVType.VIEW_CHANGE) {
+              voteViewChange(pbo);
+            }
+            if (dm != null) {
+              dm.finalConverge(pbo);
+            }
           case PBFTStage.DUPLICATE =>
-            log.info("Duplicated Vote Message!:V=" + pbo.getV + ",N=" + pbo.getN +",State="+pbo.getState+ ",org=" + pbo.getOriginBcuid)
+            log.info("Duplicated Vote Message!:V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",State=" + pbo.getState + ",org=" + pbo.getOriginBcuid)
           case s @ _ =>
             log.debug("Noop for state:" + newstate + ",voteresult=" + s)
 
