@@ -18,6 +18,8 @@ import onight.tfw.ntrans.api.annotation.ActorRequire
 import org.fc.brewchain.p22p.pbgens.P22P.PModule
 import org.brewchain.bcapi.backend.ODBSupport
 import org.brewchain.bcapi.backend.ODBDao
+import onight.tfw.ojpa.api.StoreServiceProvider
+import onight.tfw.ntrans.api.ActorService
 
 abstract class PSMPZP[T <: Message] extends SessionModules[T] with PBUtils with OLog {
   override def getModule: String = PModule.PZP.name()
@@ -25,7 +27,7 @@ abstract class PSMPZP[T <: Message] extends SessionModules[T] with PBUtils with 
 
 @NActorProvider
 @Slf4j
-object Daos extends PSMPZP[Message] {
+object Daos extends PSMPZP[Message] with ActorService   {
 
   @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSP22p])
   @BeanProperty
@@ -34,6 +36,11 @@ object Daos extends PSMPZP[Message] {
   @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSViewStateStorage])
   @BeanProperty
   var viewstateDB: ODBSupport = null
+  
+  
+  @ActorRequire(name="bdb_provider",scope="global")
+  @BeanProperty
+  var bdbprovider:StoreServiceProvider = null;
 
   
   def setOdb(daodb: DomainDaoSupport) {

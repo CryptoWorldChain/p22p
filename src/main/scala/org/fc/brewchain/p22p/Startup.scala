@@ -19,6 +19,7 @@ object Startup extends SessionModules[Message] {
 
     LayerNodeTask.initTask();
     
+    log.debug("bdbprodiver=="+Daos.bdbprovider);
     log.info("tasks inited....[OK]");
   }
 
