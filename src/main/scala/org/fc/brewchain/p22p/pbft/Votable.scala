@@ -13,6 +13,10 @@ import org.fc.brewchain.p22p.utils.Config
 import org.fc.brewchain.p22p.Daos
 import scala.collection.JavaConversions._
 import org.fc.brewchain.p22p.pbgens.P22P.PVType
+import org.fc.brewchain.p22p.node.Networks
+import org.fc.brewchain.p22p.action.PMNodeHelper
+import org.fc.brewchain.bcapi.crypto.BitMap
+import org.apache.commons.lang3.StringUtils
 
 trait Votable extends OLog {
   def makeDecision(pbo: PVBase, reallist: List[OPair] = null): Option[Any]
@@ -46,18 +50,6 @@ trait Votable extends OLog {
           None
         }
     }, pbo.getN)
-  }
-}
-
-object DMVotingNodeBits extends Votable with OLog {
-  def makeDecision(pbo: PVBase, reallist: List[OPair]): Option[String] = {
-    val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
-    log.debug("makeDecision for DMVotingNodeBits:F=" + pbo.getFromBcuid + ",R=" + vb.getNodeBitsEnc);
-    Some(vb.getNodeBitsEnc)
-  }
-  def finalConverge(pbo: PVBase): Unit = {
-    val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
-    log.debug("FinalConverge! for DMVotingNodeBits:F=" + pbo.getFromBcuid + ",Result=" + vb.getNodeBitsEnc);
   }
 }
 
@@ -111,10 +103,10 @@ object DMViewChange extends Votable with OLog {
 
       StateStorage.updateTopViewState(pbo.toBuilder()
         .setViewCounter(0)
-        .setMType(PVType.VOTE_IDX).setState(PBFTStage.REPLY)
+        .setMType(PVType.NETWORK_IDX).setState(PBFTStage.REPLY)
         .setStoreNum(maxv).setContents(vb.build().toByteString()).build());
       //      dm.voteList(pbo, reallist)
-      log.debug("FinalConverge! for DMViewChange:F:F=" + pbo.getFromBcuid + ",Result="+ maxv+"."+ vb.getStoreNum + "." + vb.getV);
+      log.debug("FinalConverge! for DMViewChange:F:F=" + pbo.getFromBcuid + ",Result=" + maxv + "." + vb.getStoreNum + "." + vb.getV);
 
     } else {
       Undecisible()

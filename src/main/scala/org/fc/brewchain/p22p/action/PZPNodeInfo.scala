@@ -29,6 +29,7 @@ import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
 import org.fc.brewchain.p22p.pbgens.P22P.PSNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import org.fc.brewchain.p22p.node.Networks
+import org.fc.brewchain.bcapi.crypto.BitMap
 
 @NActorProvider
 @Slf4j
@@ -44,19 +45,20 @@ object PZPNodeInfoService extends OLog with PBUtils with LService[PSNodeInfo] wi
     var ret = PRetNodeInfo.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
-      ret.setCurrent(toPMNode(NodeInstance.root))
+      ret.setCurrent(toPMNode(NodeInstance.root()))
       val pending = Networks.instance.pendingNodes;
       val directNodes = Networks.instance.directNodes;
       log.debug("pending=" + Networks.instance.pendingNodes.size + "::" + Networks.instance.pendingNodes)
       //      ret.addNodes(toPMNode(NodeInstance.curnode));
       pending.map { _pn =>
         log.debug("pending==" + _pn)
-        ret.addPendings(toPMNode(_pn));
+        ret.addPnodes(toPMNode(_pn));
       }
       directNodes.map { _pn =>
         log.debug("directnodes==" + _pn)
-        ret.addNodes(toPMNode(_pn));
+        ret.addDnodes(toPMNode(_pn));
       }
+      ret.setBitEncs(BitMap.hexToMapping(Networks.instance.node_bits));
     } catch {
       case fe: NodeInfoDuplicated => {
         ret.clear();

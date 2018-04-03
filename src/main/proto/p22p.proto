@@ -66,9 +66,10 @@ message PRetNodeInfo{//加入的返回信息
 
 	PMNodeInfo current = 4;//本节点信息
 	
-	repeated PMNodeInfo pendings = 5;//交换一下我知道的节点信息
+	string bit_encs = 5;// for pending
+	repeated PMNodeInfo pnodes = 6;//交换一下我知道的节点信息
 	
-	repeated PMNodeInfo nodes = 6;//交换一下我知道的节点信息
+	repeated PMNodeInfo dnodes = 7;//交换一下我知道的节点信息
 	
 	string sign = 100;//对上述数据的签名结果
 }
@@ -91,7 +92,7 @@ enum PBFTStage{
 }
 
 enum PVType{
-	VOTE_IDX = 0;//投票pending 的节点
+	NETWORK_IDX = 0;//投票pending 的节点
 	VIEW_CHANGE = 1; // can make snapshot
 }
 
@@ -117,8 +118,10 @@ message PVBase{
 }
 
 message PBVoteNodeIdx{//投票决定节点的idx,80%通过才行
-	repeated PMNodeInfo nodes = 1;//所有节点的信息
+	repeated PMNodeInfo pending_nodes = 1;//所有节点的信息
 	string node_bits_enc = 2;//所有节点的编码信息
+	string pending_bits_enc = 3;//
+
 }
 
 

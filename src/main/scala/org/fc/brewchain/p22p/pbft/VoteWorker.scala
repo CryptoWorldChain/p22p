@@ -38,9 +38,7 @@ object VoteWorker extends SRunner with LogHelper {
   def getName() = "VoteWorker"
 
   def wallMessage(pbo: PVBase) = {
-    Networks.instance.pendingNodes.map { node =>
-      MessageSender.postMessage("VOTPZP", pbo, node.bcuid)
-    }
+    Networks.wallMessage("VOTPZP", pbo, pbo.getMessageUid)
   }
 
   def voteViewChange(pbo1: PVBase) = {
@@ -75,15 +73,16 @@ object VoteWorker extends SRunner with LogHelper {
         Daos.viewstateDB.put(StateStorage.STR_seq(vbase), ov
           .setExtdata(
             ByteString.copyFrom(vbase.build().toByteArray())).clearSecondKey().build())
-        wallMessage(vbase.build())
+        VoteQueue.appendInQ(vbase.build())
+//        wallMessage(vbase.build())
       }
     }
   }
   def makeVote(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage) = {
-    MDCSetMessageID(pbo.getMType+"."+pbo.getMessageUid)
+    MDCSetMessageID(pbo.getMTypeValue+"."+pbo.getMessageUid)
 
     implicit val dm = pbo.getMType match {
-      case PVType.VOTE_IDX =>
+      case PVType.NETWORK_IDX =>
         DMVotingNodeBits
       case PVType.VIEW_CHANGE =>
         DMViewChange
@@ -117,13 +116,15 @@ object VoteWorker extends SRunner with LogHelper {
             MessageSender.replyPostMessage("VOTPZP", pbo.getFromBcuid, reply.build());
           case PBFTStage.REPLY =>
             StateStorage.saveStageV(pbo, ov.build());
-            log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",OF=" + pbo.getOriginBcuid)
-            if (pbo.getViewCounter >= Config.NUM_VIEWS_EACH_SNAPSHOT && pbo.getMType != PVType.VIEW_CHANGE) {
-              voteViewChange(pbo);
-            }
+            log.info("MergeSuccess."+pbo.getMType+":V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",OF=" + pbo.getOriginBcuid)
             if (dm != null) {
               dm.finalConverge(pbo);
             }
+            
+            if (pbo.getViewCounter >= Config.NUM_VIEWS_EACH_SNAPSHOT && pbo.getMType != PVType.VIEW_CHANGE) {
+              voteViewChange(pbo);
+            }
+            
           case PBFTStage.DUPLICATE =>
             log.info("Duplicated Vote Message!:V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",State=" + pbo.getState + ",org=" + pbo.getOriginBcuid)
           case s @ _ =>

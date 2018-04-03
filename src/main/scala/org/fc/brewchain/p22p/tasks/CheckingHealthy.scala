@@ -46,8 +46,8 @@ object CheckingHealthy extends SRunner {
             log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
             Networks.instance.removePendingNode(n);
           } else {
-            log.debug("get nodes:pendingcount=" + retpack.getPendingsCount);
-            retpack.getPendingsList.map { pn =>
+            log.debug("get nodes:pendingcount=" + retpack.getPnodesCount);
+            retpack.getPnodesList.map { pn =>
               Networks.instance.addPendingNode(fromPMNode(pn));
             }
           }

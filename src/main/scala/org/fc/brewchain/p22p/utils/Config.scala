@@ -11,12 +11,16 @@ object Config {
   val MIN_EPOCH_EACH_VOTE = prop.get(PROP_DOMAIN + "min.epoch.each.vote", 10)
   val MAX_VOTE_SLEEP_MS = prop.get(PROP_DOMAIN + "max.vote.sleep.ms", 60000);
   val MIN_VOTE_SLEEP_MS = prop.get(PROP_DOMAIN + "min.vote.sleep.ms", 10000);
+  
+  val MIN_VOTE_WITH_NOCHANGE_SLEEP_MS = prop.get(PROP_DOMAIN + "min.vote.sleep.nochange.ms", 120*1000);
 
   val TICK_CHECK_HEALTHY = prop.get(PROP_DOMAIN + "tick.check.healthy", 10);
   val TICK_VOTE_MAP = prop.get(PROP_DOMAIN + "tick.vote.map", 10);
   val TICK_VOTE_WORKER = prop.get(PROP_DOMAIN + "tick.vote.worker", 1);
   val NUM_VIEWS_EACH_SNAPSHOT = prop.get(PROP_DOMAIN + "num.views.each.snapshot", 10); //每快照有几个
   
+  
+  val STR_REJECT = "__REJECT";
   
   def VOTE_DEBUG: Boolean = {
     //    NodeHelper.getCurrNodeListenOutPort != 5100;

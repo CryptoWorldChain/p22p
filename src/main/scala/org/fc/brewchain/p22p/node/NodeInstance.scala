@@ -106,6 +106,9 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper{
       }
     }
   }
+  def resetRoot(node:PNode):Unit = {
+    this.rootnode = node;
+  }
   def changeNodeIdx(test_bits: BigInteger = new BigInteger("0")): Int = {
     this.synchronized {
       var v = 0;

@@ -64,7 +64,7 @@ object MessageSender extends NActor with OLog {
     //    log.debug("wallMessage.OK:" + pack.getModuleAndCMD)
   }
 
-  def postMessage(gcmd: String, body: Message, node: PNode) {
+  def postMessage(gcmd: String, body: Message, node: PNode) :Unit = {
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node)
     log.trace("postMessage:" + pack)

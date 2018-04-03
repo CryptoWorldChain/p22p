@@ -47,14 +47,22 @@ case class PNode(name: String, node_idx: Int, //node info
     "PNode(" + uri + "," + startup_time + "," + pub_key + "," + node_idx + ")@" + this.hashCode()
   }
 
-  def changeIdx(idx: Int): PNode = PNode(name, idx, protocol, address, port, startup_time, pub_key, counter, idx)
+  def changeIdx(idx: Int): PNode = PNode(
+    name, idx, //node info
+    protocol, address, port, //
+    startup_time, //
+    pub_key, //
+    counter,
+    try_node_idx,
+    bcuid,
+    pri_key)
 }
 
 object PNode {
   def fromURL(url: String): PNode = {
     val u = new URL(url);
-    val n = new PNode(name = u.getHost, node_idx = 0, protocol = u.getProtocol, address = u.getHost, port = u.getPort, 
-        bcuid = Base64.encodeBase64URLSafeString(url.getBytes))
+    val n = new PNode(name = u.getHost, node_idx = 0, protocol = u.getProtocol, address = u.getHost, port = u.getPort,
+      bcuid = Base64.encodeBase64URLSafeString(url.getBytes))
     n
   }
 

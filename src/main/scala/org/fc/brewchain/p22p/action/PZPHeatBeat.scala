@@ -32,6 +32,7 @@ import org.fc.brewchain.p22p.node.Networks
 
 import org.brewchain.bcapi.utils.PacketIMHelper._
 import org.fc.brewchain.p22p.utils.LogHelper
+import org.fc.brewchain.bcapi.crypto.BitMap
 
 @NActorProvider
 @Slf4j
@@ -55,12 +56,13 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
       //      ret.addNodes(toPMNode(NodeInstance.curnode));
       pending.map { _pn =>
         log.debug("pending==" + _pn)
-        ret.addPendings(toPMNode(_pn));
+        ret.addPnodes(toPMNode(_pn));
       }
       directNodes.map { _pn =>
         log.debug("directnodes==" + _pn)
-        ret.addNodes(toPMNode(_pn));
+        ret.addDnodes(toPMNode(_pn));
       }
+      ret.setBitEncs(BitMap.hexToMapping(Networks.instance.node_bits));
 
     } catch {
       case fe: NodeInfoDuplicated => {
