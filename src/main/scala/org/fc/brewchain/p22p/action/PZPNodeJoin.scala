@@ -29,7 +29,7 @@ import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
 import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.p22p.node.PNode
 import org.brewchain.bcapi.utils.PacketIMHelper._
-
+import org.fc.brewchain.p22p.pbft.VoteWorker
 
 @NActorProvider
 @Slf4j
@@ -41,7 +41,7 @@ object PZPNodeJoin extends PSMPZP[PSJoin] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSJoin, handler: CompleteHandler) = {
-    log.debug("JoinService::" + pack.getFrom()+",OP="+pbo.getOp)
+    log.debug("JoinService::" + pack.getFrom() + ",OP=" + pbo.getOp)
     var ret = PRetJoin.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
@@ -51,7 +51,7 @@ object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with P
         val _urlcheck = new URL(from.getProtocol + "://" + from.getAddress + ":" + from.getPort)
         if ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == NodeInstance.root().node_idx) ||
           StringUtils.equals(from.getBcuid, NodeInstance.root().bcuid)) {
-          log.info("same NodeIdx :" + from.getNodeIdx+",tryIdx="+from.getTryNodeIdx+",bcuid="+from.getBcuid);
+          log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid);
           throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
         } else if (Networks.instance.node_bits.testBit(from.getTryNodeIdx)) {
           log.info("nodebits duplicated NodeIdx :" + from.getNodeIdx);
@@ -60,14 +60,23 @@ object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with P
           //name, idx, protocol, address, port, startup_time, pub_key, counter,idx
           val n = fromPMNode(from);
           log.info("add Pending Node:bcuid=" + n.bcuid);
+          Networks.instance.onlineMap.put(n.bcuid, n);
           Networks.instance.addPendingNode(n)
+          try {
+            VoteWorker.synchronized {
+              log.debug("notify to wote");
+              VoteWorker.notifyAll()
+            }
+          } finally {
+
+          }
         }
       } else if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
         //        NodeInstance.curnode.addPendingNode(new LinkNode(from.getProtocol, from.getNodeName, from.getAddress, // 
         //          from.getPort, from.getStartupTime, from.getPubKey, from.getTryNodeIdx, from.getNodeIdx))
       }
 
-//      ret.addNodes(toPMNode(NodeInstance.root));
+      //      ret.addNodes(toPMNode(NodeInstance.root));
 
       Networks.instance.directNodes.map { _pn =>
         log.debug("direct.node==" + _pn.bcuid)

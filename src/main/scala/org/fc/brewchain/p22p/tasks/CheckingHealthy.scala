@@ -30,15 +30,17 @@ import scala.collection.JavaConversions._
 //投票决定当前的节点
 object CheckingHealthy extends SRunner {
   def getName() = "CheckingHealthy"
+
   def runOnce() = {
+    val pack = PSNodeInfo.newBuilder().setNode(toPMNode(NodeInstance.root())).build()
+
     Networks.instance.pendingNodes.filter { _.bcuid != NodeInstance.root().bcuid }.map { n =>
-      val pack = PSNodeInfo.newBuilder();
-      log.debug("checking Health to @" + n.bcuid + ",uri=" + n.uri())
-      MessageSender.sendMessage("HBTPZP", pack.build(), n, new CallBack[FramePacket] {
+      log.debug("checking Health to pending@" + n.bcuid + ",uri=" + n.uri())
+      MessageSender.sendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
         def onSuccess(fp: FramePacket) = {
           log.debug("send HBTPZP success:to " + n.uri + ",body=" + fp.getBody)
           val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
-//          log.debug("get nodes:" + retpack);
+          //          log.debug("get nodes:" + retpack);
           if (retpack.getCurrent == null) {
             log.debug("Node EROR NotFOUND:" + retpack);
             Networks.instance.removePendingNode(n);
@@ -46,15 +48,45 @@ object CheckingHealthy extends SRunner {
             log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
             Networks.instance.removePendingNode(n);
           } else {
-            log.debug("get nodes:pendingcount=" + retpack.getPnodesCount);
-            retpack.getPnodesList.map { pn =>
-              Networks.instance.addPendingNode(fromPMNode(pn));
+            log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
+            Networks.instance.onlineMap.put(n.bcuid, n);
+            def joinFunc(pn: PMNodeInfo) = {
+              val pnode = fromPMNode(pn);
+              Networks.instance.addPendingNode(pnode);
+              JoinNetwork.pendingJoinNodes.put(pnode.bcuid, pnode)
             }
+            retpack.getPnodesList.map(joinFunc)
+            retpack.getDnodesList.map(joinFunc)
           }
         }
         def onFailed(e: java.lang.Exception, fp: FramePacket) {
           log.debug("send HBTPZP ERROR " + n.uri + ",e=" + e.getMessage, e)
           Networks.instance.removePendingNode(n);
+          MessageSender.dropNode(n)
+          JoinNetwork.joinedNodes.remove(n.uri.hashCode());
+          JoinNetwork.pendingJoinNodes.remove(n.bcuid);
+        }
+      });
+    }
+    Networks.instance.directNodes.filter { _.bcuid != NodeInstance.root().bcuid }.map { n =>
+
+      log.debug("checking Health to directs@" + n.bcuid + ",uri=" + n.uri())
+      MessageSender.sendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
+        def onSuccess(fp: FramePacket) = {
+          log.debug("send HBTPZP Direct success:to " + n.uri + ",body=" + fp.getBody)
+          Networks.instance.onlineMap.put(n.bcuid, n);
+          val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
+          log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
+          retpack.getPnodesList.map { pn =>
+            Networks.instance.addPendingNode(fromPMNode(pn));
+          }
+        }
+        def onFailed(e: java.lang.Exception, fp: FramePacket) {
+          log.debug("send HBTPZP Direct ERROR " + n.uri + ",e=" + e.getMessage, e)
+          MessageSender.dropNode(n)
+          JoinNetwork.joinedNodes.remove(n.uri.hashCode());
+          JoinNetwork.pendingJoinNodes.remove(n.bcuid);
+          Networks.instance.removeDNode(n);
         }
       });
     }

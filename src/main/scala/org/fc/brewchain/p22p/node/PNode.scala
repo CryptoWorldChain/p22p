@@ -22,12 +22,14 @@ import java.net.URL
 import onight.tfw.outils.serialize.UUIDGenerator
 import onight.tfw.outils.conf.PropHelper
 import org.apache.commons.codec.binary.Base64
+import org.fc.brewchain.bcapi.crypto.EncHelper
 
 sealed trait Node
 
 case class NoneNode() extends Node
 
 case class PNode(name: String, node_idx: Int, //node info
+    sign: String,
     protocol: String = "", address: String = "", port: Int = 0, //
     startup_time: Long = System.currentTimeMillis(), //
     pub_key: String = null, //
@@ -44,10 +46,10 @@ case class PNode(name: String, node_idx: Int, //node info
   }
 
   override def toString(): String = {
-    "PNode(" + uri + "," + startup_time + "," + pub_key + "," + node_idx + ")@" + this.hashCode()
+    "PNode(" + uri + "," + startup_time + "," + pub_key + "," + node_idx + "," + sign + ")@" + this.hashCode()
   }
 
-  def changeIdx(idx: Int): PNode = PNode(
+  def changeIdx(idx: Int): PNode = PNode.signNode(
     name, idx, //node info
     protocol, address, port, //
     startup_time, //
@@ -61,9 +63,38 @@ case class PNode(name: String, node_idx: Int, //node info
 object PNode {
   def fromURL(url: String): PNode = {
     val u = new URL(url);
-    val n = new PNode(name = u.getHost, node_idx = 0, protocol = u.getProtocol, address = u.getHost, port = u.getPort,
+    val n = new PNode(name = u.getHost, node_idx = 0, "", protocol = u.getProtocol, address = u.getHost, port = u.getPort,
       bcuid = Base64.encodeBase64URLSafeString(url.getBytes))
     n
+  }
+
+  def signNode(name: String, node_idx: Int, //node info
+    protocol: String = "", address: String = "", port: Int = 0, //
+    startup_time: Long = System.currentTimeMillis(), //
+    pub_key: String = null, //
+    counter: CCSet = CCSet(),
+    try_node_idx: Int = 0,
+    bcuid: String = UUIDGenerator.generate(),
+    pri_key: String = null):PNode= {
+    if (pri_key != null) {
+      PNode(name, node_idx, EncHelper.ecSign(pri_key, Array(node_idx, protocol, address, port, bcuid).mkString("|").getBytes),
+        protocol, address, port, //
+        startup_time, //
+        pub_key, //
+        counter,
+        try_node_idx,
+        bcuid,
+        pri_key)
+    } else {
+      PNode(name, node_idx, null,
+        protocol, address, port, //
+        startup_time, //
+        pub_key, //
+        counter,
+        try_node_idx,
+        bcuid,
+        pri_key)
+    }
   }
 
   val prop: PropHelper = new PropHelper(null);

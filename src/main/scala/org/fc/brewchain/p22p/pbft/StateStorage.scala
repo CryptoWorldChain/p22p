@@ -70,6 +70,7 @@ object StateStorage extends OLog {
               .setCreateTime(System.currentTimeMillis())
               .setLastUpdateTime(System.currentTimeMillis())
               .setFromBcuid(NodeInstance.root().bcuid)
+              .setOriginBcuid(NodeInstance.root().bcuid)
               .setState(newstate)
               .build().toByteArray()))
             .build());
@@ -90,12 +91,16 @@ object StateStorage extends OLog {
           case dbpbo if StringUtils.equals(dbpbo.getOriginBcuid, pbo.getOriginBcuid) && pbo.getV == dbpbo.getV
             && dbpbo.getStateValue > pbo.getStateValue =>
             log.debug("state low dbV=" + dbpbo.getStateValue + ",pbV=" + pbo.getStateValue + ",V=" + pbo.getV + ",f=" + pbo.getFromBcuid)
-            Some(null)
-          case dbpbo if System.currentTimeMillis() - dbpbo.getCreateTime > Config.TIMEOUT_STATE_VIEW
-            && pbo.getV > dbpbo.getV =>
+            Some(ov.toBuilder())
+          case dbpbo if (System.currentTimeMillis() - dbpbo.getLastUpdateTime > Config.TIMEOUT_STATE_VIEW)
+            && pbo.getV >= dbpbo.getV =>
             Some(ov.toBuilder());
           case dbpbo if pbo.getV >= dbpbo.getV && (
-            dbpbo.getState == PBFTStage.INIT || dbpbo.getState == PBFTStage.REPLY) =>
+            dbpbo.getState == PBFTStage.INIT || dbpbo.getState == PBFTStage.REPLY
+            || StringUtils.isBlank(dbpbo.getOriginBcuid)) =>
+            Some(ov.toBuilder());
+          case dbpbo if (dbpbo.getState == PBFTStage.REJECT || dbpbo.getRejectState == PBFTStage.REJECT)
+            && !StringUtils.equals(dbpbo.getOriginBcuid, pbo.getOriginBcuid) =>
             Some(ov.toBuilder());
           case dbpbo @ _ =>
             pbo.getState match {
@@ -110,6 +115,7 @@ object StateStorage extends OLog {
                         .setExtdata(ByteString.copyFrom(pbo.toBuilder()
                           .setFromBcuid(NodeInstance.root().bcuid)
                           .setState(PBFTStage.INIT)
+                          .setV(pbo.getV).setStoreNum(pbo.getStoreNum).setViewCounter(pbo.getViewCounter)
                           .build().toByteArray()))
                         .build())
                     None;
@@ -120,7 +126,10 @@ object StateStorage extends OLog {
               case _ =>
                 log.debug("Cannot MergeView For local state Not EQUAL:"
                   + "db.[O=" + dbpbo.getOriginBcuid + ",F=" + dbpbo.getFromBcuid + ",V=" + dbpbo.getV + ",S=" + dbpbo.getStateValue
-                  + "],p[O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid + ",V=" + pbo.getV + ",S=" + pbo.getStateValue + "]");
+                  + ",RJ=" + dbpbo.getRejectState
+                  + ",TO=" + JodaTimeHelper.secondFromNow(dbpbo.getLastUpdateTime)
+                  + "],p[O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid + ",V=" + pbo.getV + ",S=" + pbo.getStateValue
+                  + ",RJ=" + pbo.getRejectState + "]");
                 None;
             }
 
@@ -135,7 +144,7 @@ object StateStorage extends OLog {
   def saveStageV(pbo: PVBase, ov: OValue) {
     val key = STR_seq(pbo) + ".F." + pbo.getV;
     //    val dbov = Daos.viewstateDB.get(key).get
-    log.debug("saveStage:V=" + pbo.getV + ",O=" + pbo.getOriginBcuid)
+    //    log.debug("saveStage:V=" + pbo.getV + ",O=" + pbo.getOriginBcuid)
     //    if (dbov != null) {
     //      val pb = PVBase.newBuilder().mergeFrom(ov.getExtdata);
     //      pb.setContents(ByteString.copyFrom(Base64.encodeBase64(pb.getContents.toByteArray()))).setLastUpdateTime(System.currentTimeMillis())
@@ -144,10 +153,10 @@ object StateStorage extends OLog {
     Daos.viewstateDB.put(STR_seq(pbo) + ".F." + pbo.getV, ov);
   }
 
-  def updateLocalViewState(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage)(implicit dm: Votable = null): PBFTStage = {
-    updateNodeStage(pbo, pbo.getState)
-    makeVote(pbo, ov, newstate)(dm)
-  }
+  //  def updateLocalViewState(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage)(implicit dm: Votable = null): PBFTStage = {
+  //    updateNodeStage(pbo, pbo.getState)
+  //    makeVote(pbo, ov, newstate)(dm)
+  //  }
   def updateTopViewState(pbo: PVBase) {
     this.synchronized({
       val ov = Daos.viewstateDB.get(StateStorage.STR_seq(pbo)).get
@@ -158,60 +167,112 @@ object StateStorage extends OLog {
       }
     })
   }
+
+  def saveIfNotExist(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage): PBFTStage = {
+    val dbkey = STR_seq(pbo) + "." + pbo.getOriginBcuid + "." + pbo.getMessageUid + "." + pbo.getV + "." + newstate;
+    Daos.viewstateDB.get(dbkey).get match {
+      case ov if ov != null => //&& PVBase.newBuilder().mergeFrom(ov.getExtdata).getState == newstate =>
+        log.debug("Omit duplicated=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+        PBFTStage.DUPLICATE;
+      case _ =>
+        Daos.viewstateDB.put(dbkey, ov.build());
+        newstate
+    }
+  }
   def makeVote(pbo: PVBase, ov: OValue.Builder, newstate: PBFTStage)(implicit dm: Votable = null): PBFTStage = {
     //    val dmresult = if (dm != null && pbo.getState == PBFTStage.PREPARE) dm.makeDecision(pbo) else 0
-    val ret = voteNodeStages(pbo) match {
-      case n: Converge if n.decision == pbo.getState =>
-        Daos.viewstateDB.get(STR_seq(pbo)).get match {
-          case ov if ov != null && PVBase.newBuilder().mergeFrom(ov.getExtdata).getState == newstate =>
-            PBFTStage.DUPLICATE;
-          case _ =>
-            ov.setExtdata(
-              ByteString.copyFrom(pbo.toBuilder()
-                .setState(newstate)
-                .setLastUpdateTime(System.currentTimeMillis())
-                .build().toByteArray()))
-            log.debug("Vote::MergeOK,PS=" + pbo.getState + ",New=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid + ",from=" + pbo.getFromBcuid);
-            Daos.viewstateDB.put(STR_seq(pbo), ov.clone().clearSecondKey().build());
-            newstate
-        }
-
-      case un: Undecisible =>
-        log.debug("Vote::Undecisible:State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
-        PBFTStage.NOOP
-      case no: NotConverge =>
-        log.debug("Vote::Not Converge:State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
-        if (StringUtils.equals(pbo.getOriginBcuid, NodeInstance.root().bcuid)) {
-          Daos.viewstateDB.put(STR_seq(pbo),
-            OValue.newBuilder().setCount(pbo.getN) //
-              .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                .setFromBcuid(NodeInstance.root().bcuid)
-                .setState(PBFTStage.INIT)
-                .setLastUpdateTime(System.currentTimeMillis())
-                .build().toByteArray()))
-              .build())
-        }
-        PBFTStage.NOOP
-      case n: Converge if n.decision == PBFTStage.REJECT =>
-        log.warn("getRject ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState);
-        if (StringUtils.equals(pbo.getOriginBcuid, NodeInstance.root().bcuid)) {
-          Daos.viewstateDB.put(STR_seq(pbo),
-            OValue.newBuilder().setCount(pbo.getN) //
-              .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                .setFromBcuid(NodeInstance.root().bcuid)
-                .setState(PBFTStage.INIT)
-                .setLastUpdateTime(System.currentTimeMillis())
-                .build().toByteArray()))
-              .build())
-        }
-        PBFTStage.REJECT
-      case n: Converge =>
-        log.warn("unknow ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState);
-        PBFTStage.NOOP
+//    val dbkey = STR_seq(pbo) + "." + pbo.getFromBcuid + "." + pbo.getMessageUid + "." + pbo.getV + ".";
+    val dbkey = STR_seq(pbo) + "." + pbo.getOriginBcuid + "." + pbo.getMessageUid + "." + pbo.getV + ".";
+    Daos.viewstateDB.get(dbkey + newstate).get match {
+      case ov if ov != null => //&& PVBase.newBuilder().mergeFrom(ov.getExtdata).getState == newstate =>
+//        log.debug("Omit duplicated=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+        PBFTStage.DUPLICATE;
       case _ =>
-        PBFTStage.NOOP
+//        Daos.viewstateDB.get(dbkey + pbo.getState).get match {
+//          case ov if ov != null =>
+//            log.debug("Omit duplicated=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+//
+//            PBFTStage.DUPLICATE;
+//          case _ =>
+            voteNodeStages(pbo) match {
+              case n: Converge if n.decision == pbo.getState =>
+                ov.setExtdata(
+                  ByteString.copyFrom(pbo.toBuilder()
+                    .setState(newstate)
+                    .setLastUpdateTime(System.currentTimeMillis())
+                    .build().toByteArray()))
+                log.debug("Vote::MergeOK,PS=" + pbo.getState + ",New=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid + ",from=" + pbo.getFromBcuid);
+                Daos.viewstateDB.put(STR_seq(pbo), ov.clone().clearSecondKey().build());
+                saveIfNotExist(pbo,ov,newstate);
+                newstate
+
+              case un: Undecisible =>
+                log.debug("Vote::Undecisible:State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+                PBFTStage.NOOP
+              case no: NotConverge =>
+                log.debug("Vote::Not Converge:State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+
+                ov.setExtdata(
+                  ByteString.copyFrom(pbo.toBuilder()
+                    .setRejectState(PBFTStage.NOOP)
+                    .setLastUpdateTime(System.currentTimeMillis())
+                    .build().toByteArray()))
+                Daos.viewstateDB.put(dbkey + pbo.getState, ov.build());
+
+                if (StringUtils.equals(pbo.getOriginBcuid, NodeInstance.root().bcuid)) {
+                  log.debug("Reject for My Vote ")
+                  Daos.viewstateDB.put(STR_seq(pbo),
+                    OValue.newBuilder().setCount(pbo.getN) //
+                      .setExtdata(ByteString.copyFrom(pbo.toBuilder()
+                        .setFromBcuid(NodeInstance.root().bcuid)
+                        .setState(PBFTStage.INIT)
+                        .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
+                        .build().toByteArray()))
+                      .build())
+                }
+                PBFTStage.NOOP
+              case n: Converge if n.decision == PBFTStage.REJECT =>
+
+                ov.setExtdata(
+                  ByteString.copyFrom(pbo.toBuilder()
+                    .setRejectState(PBFTStage.REJECT)
+                    .setLastUpdateTime(System.currentTimeMillis())
+                    .build().toByteArray()))
+
+                Daos.viewstateDB.put(dbkey + pbo.getState, ov.build());
+
+                log.warn("getRject ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+                if (StringUtils.equals(pbo.getOriginBcuid, NodeInstance.root().bcuid)) {
+                  log.debug("Reject for this Vote ")
+                  Daos.viewstateDB.put(STR_seq(pbo),
+                    OValue.newBuilder().setCount(pbo.getN) //
+                      .setExtdata(ByteString.copyFrom(pbo.toBuilder()
+                        .setFromBcuid(NodeInstance.root().bcuid)
+                        .setState(PBFTStage.INIT)
+                        .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
+                        .build().toByteArray()))
+                      .build())
+                } else {
+                  log.debug("Reject for other Vote ")
+                  Daos.viewstateDB.put(STR_seq(pbo),
+                    OValue.newBuilder().setCount(pbo.getN) //
+                      .setExtdata(ByteString.copyFrom(pbo.toBuilder()
+                        .setFromBcuid(NodeInstance.root().bcuid)
+                        .setState(PBFTStage.REJECT).setRejectState(PBFTStage.REJECT)
+                        .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
+                        .build().toByteArray()))
+                      .build())
+
+                }
+                PBFTStage.REJECT
+              case n: Converge =>
+                log.warn("unknow ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState);
+                PBFTStage.NOOP
+              case _ =>
+                PBFTStage.NOOP
+            }
+//        }
     }
-    ret
   }
   def updateNodeStage(pbo: PVBase, state: PBFTStage): PBFTStage = {
     val strkey = STR_seq(pbo);
@@ -222,7 +283,6 @@ object StateStorage extends OLog {
     ov.setExtdata(ByteString.copyFrom(newpbo.toByteArray()))
       .setSecondKey(strkey + "." + pbo.getOriginBcuid + "." + pbo.getMessageUid + "." + pbo.getV)
       .setDecimals(newpbo.getStateValue);
-
     Daos.viewstateDB.put(strkey + "." + pbo.getFromBcuid + "." + pbo.getMessageUid + "." + pbo.getV + "." + newpbo.getStateValue, ov.build());
     state
   }
@@ -239,57 +299,61 @@ object StateStorage extends OLog {
     if (ovs.get != null && ovs.get.size() > 0) {
       val reallist = ovs.get.filter { ov => ov.getValue.getDecimals == pbo.getStateValue }.toList;
       log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
-      //      outputList(ovs.get)
-      dm.voteList(pbo, reallist)
+      //      outputList(ovs.get.toList)
+      if (dm != null) { //Vote only pass half
+        dm.voteList(pbo, reallist)
+      } else {
+        Undecisible()
+      }
     } else {
       Undecisible()
     }
   }
-
-  def vote(pbo: PVBase): PBFTStage = {
-    this.synchronized {
-      mergeViewState(pbo) match {
-        case Some(ov) if ov == null =>
-          PBFTStage.NOOP
-        case Some(ov) if ov != null =>
-          pbo.getState match {
-            case PBFTStage.PRE_PREPARE =>
-              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-              //updateLocalViewState(pbo, ov, PBFTStage.PREPARE)
-              updateNodeStage(pbo, PBFTStage.PREPARE)
-              if (pbo.getRejectState == PBFTStage.REJECT) {
-                PBFTStage.NOOP
-              } else {
-                PBFTStage.PREPARE
-              }
-            case PBFTStage.PREPARE =>
-              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-              updateLocalViewState(pbo, ov, PBFTStage.COMMIT)
-            case PBFTStage.COMMIT =>
-              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-              updateLocalViewState(pbo, ov, PBFTStage.REPLY)
-            case PBFTStage.REPLY =>
-              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-              saveStageV(pbo, ov.build());
-              PBFTStage.NOOP
-            //            case PBFTStage.REJECT =>
-            //              log.debug("get Reject from=" + pbo.getFromBcuid + ",V=" + pbo.getV + ",O=" + pbo.getOriginBcuid + ",OLDState=" + pbo.getOldState);
-            //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
-            //              updateLocalViewState(pbo, ov, pbo.getOldState)
-            //              PBFTStage.NOOP
-            case _ =>
-              PBFTStage.NOOP
-          }
-
-        case None =>
-          PBFTStage.REJECT
-      }
-    }
-
-  }
+  //
+  //  def vote(pbo: PVBase): PBFTStage = {
+  //    this.synchronized {
+  //      mergeViewState(pbo) match {
+  //        case Some(ov) if ov == null =>
+  //          PBFTStage.NOOP
+  //        case Some(ov) if ov != null =>
+  //          pbo.getState match {
+  //            case PBFTStage.PRE_PREPARE =>
+  //              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //              //updateLocalViewState(pbo, ov, PBFTStage.PREPARE)
+  //              updateNodeStage(pbo, PBFTStage.PREPARE)
+  //              if (pbo.getRejectState == PBFTStage.REJECT) {
+  //                PBFTStage.NOOP
+  //              } else {
+  //                PBFTStage.PREPARE
+  //              }
+  //            case PBFTStage.PREPARE =>
+  //              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //              updateLocalViewState(pbo, ov, PBFTStage.COMMIT)
+  //            case PBFTStage.COMMIT =>
+  //              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //              updateLocalViewState(pbo, ov, PBFTStage.REPLY)
+  //            case PBFTStage.REPLY =>
+  //              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //              //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //              saveStageV(pbo, ov.build());
+  //              PBFTStage.NOOP
+  //            //            case PBFTStage.REJECT =>
+  //            //              log.debug("get Reject from=" + pbo.getFromBcuid + ",V=" + pbo.getV + ",O=" + pbo.getOriginBcuid + ",OLDState=" + pbo.getOldState);
+  //            //            Daos.viewstateDB.put(STR_seq(pbo), ov.build());
+  //            //              updateLocalViewState(pbo, ov, pbo.getOldState)
+  //            //              PBFTStage.NOOP
+  //            case _ =>
+  //              PBFTStage.NOOP
+  //          }
+  //
+  //        case None =>
+  //          PBFTStage.REJECT
+  //      }
+  //    }
+  //
+  //  }
   val VIEW_ID_PROP = "org.bc.pbft.view.state"
 
 }

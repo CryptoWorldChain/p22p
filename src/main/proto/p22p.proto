@@ -58,6 +58,7 @@ message PRetJoin{//加入的返回信息
 
 message PSNodeInfo{//加入
 	string req_token = 1;//是否获取拓扑信息
+	PMNodeInfo node = 2;
 }
 
 message PRetNodeInfo{//加入的返回信息
@@ -88,6 +89,9 @@ enum PBFTStage{
 	REPLY = 4;
 	NOOP = 5;// do nothing.. still wait for other actions
 	DUPLICATE = 6;//重复消息
+	
+	PENDING_SEND = 10;
+	
 	REJECT = 99;
 }
 
@@ -119,8 +123,11 @@ message PVBase{
 
 message PBVoteNodeIdx{//投票决定节点的idx,80%通过才行
 	repeated PMNodeInfo pending_nodes = 1;//所有节点的信息
+	
 	string node_bits_enc = 2;//所有节点的编码信息
 	string pending_bits_enc = 3;//
+	
+	repeated PMNodeInfo d_nodes = 4;//所有直连信息
 
 }
 

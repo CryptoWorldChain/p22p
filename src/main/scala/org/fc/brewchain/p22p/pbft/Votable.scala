@@ -17,39 +17,67 @@ import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.bcapi.crypto.BitMap
 import org.apache.commons.lang3.StringUtils
+import org.fc.brewchain.p22p.core.Votes.NotConverge
+import org.fc.brewchain.p22p.core.Votes.Converge
+import org.fc.brewchain.p22p.node.NodeInstance
 
 trait Votable extends OLog {
   def makeDecision(pbo: PVBase, reallist: List[OPair] = null): Option[Any]
   def finalConverge(pbo: PVBase): Unit
   def voteList(pbo: PVBase, reallist: List[OPair]): VoteResult = { // find max store num.
-    val pboresult = if (pbo.getState == PBFTStage.PREPARE) {
-      makeDecision(pbo, reallist);
-    } else {
-      0;
+
+    val pboresult = pbo.getState match {
+      case PBFTStage.PRE_PREPARE if NodeInstance.isLocalNode(pbo.getFromBcuid) =>
+        return Converge(pbo.getState); //bad coding....for return
+      case PBFTStage.PRE_PREPARE =>
+        makeDecision(pbo, reallist);
+      case PBFTStage.PREPARE =>
+        makeDecision(pbo, reallist);
+      case _ =>
+        0
     }
-    Votes.vote(reallist).PBFTVote({
-      x =>
-        val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata).build();
-        val dbresult = if (pbo.getState == PBFTStage.PREPARE) {
-          makeDecision(p, reallist);
-        } else {
-          0;
-        }
-        //          log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
-        //            + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
-        if (pbo.getCreateTime - p.getCreateTime > Config.TIMEOUT_STATE_VIEW_RESET) {
-          log.debug("Force TIMEOUT node state to My State:" + p.getState + ",My=" + pbo.getState);
-          Some(pbo.getState)
-        } else if (pbo.getV == p.getV) {
-          if (p.getRejectState == PBFTStage.REJECT || dbresult != pboresult) {
-            Some(PBFTStage.REJECT)
-          } else {
-            Some(p.getState)
+    if (pbo.getState == PBFTStage.PRE_PREPARE) {
+      pboresult match {
+        case Some(str: String) if str.equals(Config.STR_REJECT) =>
+          Converge(PBFTStage.REJECT);
+        case None =>
+          NotConverge();
+        case _ =>
+          Converge(pbo.getState);
+      }
+    } else {
+      if (reallist.size < pbo.getN / 2 && pbo.getN > 4) {
+            log.debug("not reach vote number ,so Undecisible")
+            return Undecisible();
           }
-        } else {
-          None
-        }
-    }, pbo.getN)
+      Votes.vote(reallist).PBFTVote({
+        x =>
+          val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata).build();
+          val dbresult = if (pbo.getState == PBFTStage.PREPARE) {
+            if (pbo.getFromBcuid.equals(p.getFromBcuid)) {
+              pboresult
+            } else {
+              makeDecision(p, reallist);
+            }
+          } else {
+            0;
+          }
+          //          log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+          //            + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
+          if (pbo.getCreateTime - p.getCreateTime > Config.TIMEOUT_STATE_VIEW_RESET) {
+            log.debug("Force TIMEOUT node state to My State:" + p.getState + ",My=" + pbo.getState);
+            Some(pbo.getState)
+          } else if (pbo.getV == p.getV) {
+            if (p.getRejectState == PBFTStage.REJECT || dbresult != pboresult) {
+              Some(PBFTStage.REJECT)
+            } else {
+              Some(p.getState)
+            }
+          } else {
+            None
+          }
+      }, pbo.getN)
+    }
   }
 }
 
@@ -69,6 +97,9 @@ object DMViewChange extends Votable with OLog {
     Some(maxv + "." + choise)
   }
   override def voteList(pbo: PVBase, reallist: List[OPair]): VoteResult = { // find max store num.
+    if (pbo.getState == PBFTStage.PRE_PREPARE) {
+      return Converge(pbo.getState);
+    }
     Votes.vote(reallist).PBFTVote({
       x =>
         val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata).build();

@@ -22,53 +22,65 @@ import org.fc.brewchain.p22p.node.NodeInstance
 object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
   def makeDecision(pbo: PVBase, reallist: List[OPair]): Option[String] = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
-    log.debug("makeDecision for DMVotingNodeBits:F=" + pbo.getFromBcuid + ",R=" + vb.getNodeBitsEnc);
-    val pendingbits = BitMap.mapToBigInt(vb.getPendingBitsEnc);
-    if (pendingbits.testBit(NodeInstance.root().try_node_idx)||
-        StringUtils.equals(vb.getNodeBitsEnc, BitMap.hexToMapping(Networks.instance.node_bits))) {
-      val hasBitExists = vb.getPendingNodesList.foldLeft(false)((R, n) => {
-        if (R || Networks.instance.node_bits.testBit(n.getTryNodeIdx)) {
-          log.debug("pending nodes idx conflict:" + n.getBcuid + ",tryidx=" + n.getTryNodeIdx)
-          true
-        } else {
-          R
-        }
-      })
-      if (hasBitExists) {
-        log.debug("reject for bits exist:")
-        None;
-      } else {
-        Some(vb.getNodeBitsEnc)
-      }
+    log.debug("makeDecision NodeBits:F=" + pbo.getFromBcuid + ",R=" + vb.getNodeBitsEnc + ",S=" + pbo.getState
+      + ",V=" + pbo.getV + ",J=" + pbo.getRejectState);
+    if (pbo.getRejectState == PBFTStage.REJECT) {
+      None;
     } else {
-      log.debug("reject for node_bits not equals:")
-      None
+      val encbits = BitMap.mapToBigInt(vb.getNodeBitsEnc);
+      val pendingbits = BitMap.mapToBigInt(vb.getPendingBitsEnc);
+      val oldtotalbits = encbits.+(pendingbits);
+      var totalbits = encbits.+(pendingbits);
+
+      val pendingInList = vb.getPendingNodesList.filter { pn =>
+        pn.getBcuid.equals(NodeInstance.root().bcuid) ||
+          Networks.instance.onlineMap.contains(pn.getBcuid) ||
+          Networks.instance.directNodeByBcuid.contains(pn.getBcuid)
+      }
+      totalbits = totalbits.clearBit(NodeInstance.root().try_node_idx)
+      Networks.instance.directNodes.map { pn =>
+        totalbits = totalbits.clearBit(pn.node_idx)
+      }
+      Networks.instance.pendingNodes.map { pn =>
+        //      if(!Networks.instance.onlineMap.contains(pn.bcuid)){
+        //        log.warn("pending node not online:"+pn.bcuid);
+        //      }
+        totalbits = totalbits.clearBit(pn.try_node_idx)
+      }
+      log.debug("totalbits::" + oldtotalbits.toString(16) + "-->" + totalbits.toString(16)
+        + ":pbpendinCount=" + vb.getPendingNodesCount
+        + ":pendingInList::" + pendingInList.foldLeft(",")((A, p) => A + p.getBcuid + ","))
+
+      //1. check encbits. for direct nodes 
+      if (pendingInList.size == vb.getPendingNodesCount
+        && totalbits.bitCount == 0) {
+        Some(vb.getNodeBitsEnc)
+      } else {
+        log.debug("reject for node_bits not equals:")
+        None;
+      }
     }
   }
   def finalConverge(pbo: PVBase): Unit = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
     log.debug("FinalConverge! for DMVotingNodeBits:F=" + pbo.getFromBcuid + ",Result=" + vb.getNodeBitsEnc);
-    var bits = BigInt(0);
 
     val nodes = vb.getPendingNodesList.map { n =>
-      if (bits.testBit(n.getTryNodeIdx)) {
-        log.debug("error in try_node_idx @n=" + n.getBcuid + ",try=" + n.getTryNodeIdx + ",bits=" + bits);
-      } else { //no pub keys
-        bits = bits.setBit(n.getTryNodeIdx);
-      }
       fromPMNode(n)
     }.toList
-    
-    val bitsstr = BitMap.hexToMapping(bits);
-    if (!StringUtils.equals(bitsstr, vb.getPendingBitsEnc)) {
-      log.warn("bits error: pending local.bitenc:" + bitsstr + ",pbo.bitenc=" + vb.getPendingBitsEnc)
-    } else {
-      Networks.instance.pending2DirectNode(nodes, bits) match {
-        case true =>
-          log.info("success add pending to direct nodes")
-        case false =>
-          log.warn("failed add pending to direct nodes")
+
+    val encbits = BitMap.mapToBigInt(vb.getNodeBitsEnc);
+    val hasBitExistsInMypending = Networks.instance.pendingNodes.map { n =>
+      if (encbits.testBit(n.try_node_idx)) {
+        Networks.instance.addDNode(n);
       }
     }
+    Networks.instance.pending2DirectNode(nodes) match {
+      case true =>
+        log.info("success add pending to direct nodes::" + nodes.size)
+      case false =>
+        log.warn("failed add pending to direct nodes::" + nodes.size)
+    }
+
   }
 }

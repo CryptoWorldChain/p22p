@@ -32,19 +32,23 @@ import org.fc.brewchain.p22p.pbft.VoteQueue
 object VoteNodeMap extends SRunner {
   def getName() = "VoteNodeMap"
   def runOnce() = {
+    log.debug("VoteNodeMap :Run----Try to Vote Node Maps");
+    val oldThreadName = Thread.currentThread().getName + ""
     try {
-      log.debug("VoteNodeMap :Run----Try to Vote Node Maps");
-      val oldThreadName = Thread.currentThread().getName + ""
 
       Thread.currentThread().setName("VoteNodeMap");
       log.info("CurrentPNodes:PendingSize=" + Networks.instance.pendingNodes.size + ",DirectNodeSize=" + Networks.instance.directNodes.size);
       val vbase = PVBase.newBuilder();
 
-      vbase.setState(PBFTStage.PRE_PREPARE)
+      vbase.setState(PBFTStage.PENDING_SEND)
       vbase.setMType(PVType.NETWORK_IDX)
       var pendingbits = BigInt(1)
       //init. start to vote.
-      if (StateStorage.nextV(vbase) > 0) {
+      if (JoinNetwork.pendingJoinNodes.size() / 2 > Networks.instance.onlineMap.size || JoinNetwork.pendingJoinNodes.size() < 1) {
+        log.info("cannot vote for pendingJoinNodes Size bigger than online half:PendJoin=" +
+          JoinNetwork.pendingJoinNodes.size() + ": Online=" + Networks.instance.onlineMap.size)
+        //for fast load
+      } else if (StateStorage.nextV(vbase) > 0) {
         vbase.setMessageUid(UUIDGenerator.generate())
         vbase.setOriginBcuid(NodeInstance.root().bcuid)
         vbase.setFromBcuid(NodeInstance.root.bcuid);
@@ -52,14 +56,16 @@ object VoteNodeMap extends SRunner {
         val vbody = PBVoteNodeIdx.newBuilder();
         var bits = Networks.instance.node_bits;
         pendingbits = BigInt(0)
-        
+
         Networks.instance.pendingNodes.map(n =>
+          //          if (Networks.instance.onlineMap.contains(n.bcuid)) {
           if (bits.testBit(n.try_node_idx)) {
             log.debug("error in try_node_idx @n=" + n.name + ",try=" + n.try_node_idx + ",bits=" + bits);
           } else { //no pub keys
             pendingbits = pendingbits.setBit(n.try_node_idx);
             vbody.addPendingNodes(toPMNode(n));
-          })
+          } //          }
+          )
 
         vbody.setPendingBitsEnc(BitMap.hexToMapping(pendingbits))
         vbody.setNodeBitsEnc(BitMap.hexToMapping(Networks.instance.node_bits))
@@ -70,11 +76,12 @@ object VoteNodeMap extends SRunner {
         log.info("vote -- Nodes:" + vbody.getNodeBitsEnc + ",pendings=" + vbody.getPendingBitsEnc);
         vbase.setV(vbase.getV);
         vbase.setN(Networks.instance.pendingNodes.size + Networks.instance.directNodes.size);
+
         log.info("broadcast Vote Message:V=" + vbase.getV + ",N=" + vbase.getN + ",from=" + vbase.getFromBcuid
-          + ",SN=" + vbase.getStoreNum + ",VC=" + vbase.getViewCounter)
+          + ",SN=" + vbase.getStoreNum + ",VC=" + vbase.getViewCounter + ",messageid=" + vbase.getMessageUid)
         val vbuild = vbase.build();
-//        Networks.wallMessage("VOTPZP", vbuild);
-        VoteQueue.appendInQ(vbase.build())
+        //        Networks.wallMessage("VOTPZP", vbuild);
+        VoteQueue.appendInQ(vbase.setState(PBFTStage.PENDING_SEND).build())
       }
       //      }
       //    NodeInstance.forwardMessage("VOTPZP", vbody.build());
@@ -85,11 +92,14 @@ object VoteNodeMap extends SRunner {
       } else {
         (Config.MAX_VOTE_SLEEP_MS - Config.MIN_VOTE_SLEEP_MS) + Config.MIN_VOTE_WITH_NOCHANGE_SLEEP_MS
       }
-      Thread.sleep((Math.random() * sleepTime).asInstanceOf[Int]);
-      Thread.currentThread().setName(oldThreadName);
+      this.synchronized {
+        this.wait((Math.random() * sleepTime).asInstanceOf[Int]);
+      }
     } catch {
       case e: Throwable =>
         log.warn("unknow Error:" + e.getMessage, e)
+    } finally {
+      Thread.currentThread().setName(oldThreadName);
     }
   }
   //Scheduler.scheduleWithFixedDelay(new Runnable, initialDelay, delay, unit)

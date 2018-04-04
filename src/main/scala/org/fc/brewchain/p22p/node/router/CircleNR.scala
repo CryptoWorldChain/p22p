@@ -28,7 +28,7 @@ object CircleNR extends MessageRouter with OLog {
     network: Network = Networks.instance): Unit = {
     //    log.debug("broadcastMessage:cur=@" + to.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
     to.counter.recv.incrementAndGet();
-    network.updateConnect(from.node_idx, to.node_idx)
+//    network.updateConnect(from.node_idx, to.node_idx)
 
     to.processMessage(packet, from)
     nextHops match {

@@ -49,13 +49,13 @@ object MessageSender extends NActor with OLog {
   def sendMessage(gcmd: String, body: Message, node: PNode, cb: CallBack[FramePacket]) {
     val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node)
-    log.debug("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
+    log.trace("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     sockSender.asyncSend(pack, cb)
   }
 
   def wallMessageToPending(gcmd: String, body: Message) {
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
-    log.debug("wallMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
+    log.trace("wallMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     Networks.instance.pendingNodes.map { node =>
       appendUid(pack, node)
       sockSender.post(pack)

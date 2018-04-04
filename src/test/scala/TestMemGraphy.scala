@@ -25,7 +25,7 @@ object TestMemGraphy extends OLog {
     val networks = new ListBuffer[Network]();
     val nodesMap = new HashMap[String, PNode]();
     for (i <- 0 to nodeCount - 1) {
-      val node = new PNode(name = "a" + i, node_idx = i);
+      val node = new PNode(name = "a" + i, node_idx = i,"");
       nodes.+=(node);
       networks.append(new Network())
     }
@@ -39,7 +39,7 @@ object TestMemGraphy extends OLog {
     val sendcc = 10;
     val msg = PVBase.newBuilder().setMessageUid(UUIDGenerator.generate()).build()
     CircleNR.resetMap(nodeCount);
-    val rootn = PNode("ROOT", -1);
+    val rootn = PNode("ROOT", -1,"");
     for (i <- 1 to sendcc) {
       val net = networks(0); //(Math.random() * nodeCount % nodeCount).asInstanceOf[Int]);
       //      node.forwardMessage("aaa", msg, node.directNode.keys, node);
@@ -57,7 +57,7 @@ object TestMemGraphy extends OLog {
       if (maxconn < conns._2.size) {
         maxconn = conns._2.size
       })
-      
+       
       networks(0).connectedMap.map(conns =>
       if (maxconn == conns._2.size) {
         println("maxconn=="+conns)

@@ -52,6 +52,7 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
       ret.setCurrent(toPMNode(NodeInstance.root))
       val pending = Networks.instance.pendingNodes;
       val directNodes = Networks.instance.directNodes;
+      Networks.instance.onlineMap.put(pbo.getNode.getBcuid, fromPMNode(pbo.getNode))
       log.debug("pending=" + Networks.instance.pendingNodes.size + "::" + Networks.instance.pendingNodes)
       //      ret.addNodes(toPMNode(NodeInstance.curnode));
       pending.map { _pn =>
@@ -67,16 +68,16 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
     } catch {
       case fe: NodeInfoDuplicated => {
         ret.clear();
-        ret.setRetCode(-1).setRetMessage(fe.getMessage)
+        ret.setRetCode(-1).setRetMessage(fe.getMessage+"")
       }
       case e: FBSException => {
         ret.clear()
-        ret.setRetCode(-2).setRetMessage(e.getMessage)
+        ret.setRetCode(-2).setRetMessage(e.getMessage+"")
       }
       case t: Throwable => {
         log.error("error:", t);
         ret.clear()
-        ret.setRetCode(-3).setRetMessage(t.getMessage)
+        ret.setRetCode(-3).setRetMessage("UNKNOWN")
       }
     } finally {
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))

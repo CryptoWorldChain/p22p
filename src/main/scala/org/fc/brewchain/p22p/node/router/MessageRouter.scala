@@ -18,7 +18,7 @@ trait MessageRouter extends OLog {
 //        log.debug("broadcastMessage:cur=@" + to.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
     to.counter.recv.incrementAndGet();
     //    from.counter.send.incrementAndGet();
-    network.updateConnect(from.node_idx,to.node_idx)
+//    network.updateConnect(from.node_idx,to.node_idx)
       
     to.processMessage(packet, from)
     nextHops match {

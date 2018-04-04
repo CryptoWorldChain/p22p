@@ -26,11 +26,13 @@ import scala.collection.mutable.Map
 import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.p22p.node.Networks
 import scala.collection.JavaConversions._
+import java.util.concurrent.ConcurrentHashMap
 
 //投票决定当前的节点
 object JoinNetwork extends SRunner {
   def getName() = "JoinNetwork"
   val sameNodes = new HashMap[Integer, PNode]();
+  val pendingJoinNodes = new ConcurrentHashMap[String, PNode]();
   val joinedNodes = new HashMap[Integer, PNode]();
   val duplictedInfoNodes = Map[Int, PNode]();
   def runOnce() = {
@@ -39,10 +41,10 @@ object JoinNetwork extends SRunner {
       log.debug("CurrentNode In Network");
     } else {
       try {
-        val namedNodes = Daos.props.get("org.bc.networks", "tcp://localhost:5100").split(",").map { x =>
+        val namedNodes = (Daos.props.get("org.bc.networks", "tcp://localhost:5100").split(",").map { x =>
           log.debug("x=" + x)
           PNode.fromURL(x);
-        }.filter { x =>
+        } ++ pendingJoinNodes.values()).filter { x =>
           !sameNodes.containsKey(x.uri.hashCode()) && !joinedNodes.containsKey(x.uri.hashCode()) && //
             !NodeInstance.isLocalNode(x)
         };
@@ -67,7 +69,9 @@ object JoinNetwork extends SRunner {
                   MessageSender.changeNodeName(n.bcuid, newN.bcuid);
                   Networks.instance.addPendingNode(newN);
                   retjoin.getNodesList.map { node =>
-                    Networks.instance.addPendingNode(fromPMNode(node))
+                    val pnode = fromPMNode(node);
+                    Networks.instance.addPendingNode(pnode)
+                    pendingJoinNodes.put(node.getBcuid, pnode);
                     //
                   }
                 }
@@ -83,18 +87,18 @@ object JoinNetwork extends SRunner {
         }
         if (namedNodes.size == 0) {
           log.debug("cannot reach more nodes. try from begining");
-          if (duplictedInfoNodes.size > 0) {
-            val nl = duplictedInfoNodes.values.toSeq.PBFTVote { x => Some(x.node_idx) }
-            nl.decision match {
-              case Some(v: BigInteger) =>
-                log.debug("get Converage Value:" + v);
-                Networks.instance.removePendingNode(NodeInstance.root())
-                NodeInstance.changeNodeIdx(v);
-              case _ => {
-                log.debug("cannot get Converage :" + nl);
-                //NodeInstance.changeNodeIdx();
-              }
-            }
+          if (duplictedInfoNodes.size > 0 && !Networks.instance.directNodeByBcuid.contains(NodeInstance.root().bcuid)) {
+            //            val nl = duplictedInfoNodes.values.toSeq.PBFTVote { x => Some(x.node_idx) }
+            //            nl.decision match {
+            //              case Some(v: BigInteger) =>
+            log.debug("duplictedInfoNodes ,change My Index:");
+            Networks.instance.removePendingNode(NodeInstance.root())
+            NodeInstance.changeNodeIdx(duplictedInfoNodes.head._2.node_idx);
+            //              case _ => {
+            //                log.debug("cannot get Converage :" + nl);
+            //NodeInstance.changeNodeIdx();
+            //              }
+            //            }
             //} else {
             //NodeInstance.changeNodeIdx();
           }

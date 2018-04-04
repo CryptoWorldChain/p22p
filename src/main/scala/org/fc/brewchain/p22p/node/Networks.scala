@@ -19,8 +19,8 @@ class Network() extends OLog //
   val directNodeByBcuid: Map[String, PNode] = Map.empty[String, PNode];
   val directNodeByIdx: Map[Int, PNode] = Map.empty[Int, PNode];
   val pendingNodeByBcuid: Map[String, PNode] = Map.empty[String, PNode];
-
   val connectedMap: Map[Int, Map[Int, Int]] = Map.empty[Int, Map[Int, Int]];
+  val onlineMap: Map[String, PNode] = Map.empty[String, PNode];
 
   var node_bits = BigInt(0)
   def nodeByBcuid(name: String): Node = directNodeByBcuid.getOrElse(name, NoneNode());
@@ -31,17 +31,21 @@ class Network() extends OLog //
   def pendingNodes: Iterable[PNode] = pendingNodeByBcuid.values
 
   def addDNode(pnode: PNode): Option[PNode] = {
+
     val node = pnode.changeIdx(pnode.try_node_idx)
-    if (!directNodeByBcuid.contains(node.bcuid) && node.node_idx >= 0 && !node_bits.testBit(node.node_idx)) {
-      if (StringUtils.equals(node.bcuid, NodeInstance.root().bcuid)) {
-        NodeInstance.resetRoot(node)
+    this.synchronized {
+      if (!directNodeByBcuid.contains(node.bcuid) && node.node_idx >= 0 && !node_bits.testBit(node.node_idx)) {
+        if (StringUtils.equals(node.bcuid, NodeInstance.root().bcuid)) {
+          NodeInstance.resetRoot(node)
+        }
+        directNodeByBcuid.put(node.bcuid, node)
+        node_bits = node_bits.setBit(node.node_idx);
+        directNodeByIdx.put(node.node_idx, node);
+        removePendingNode(node)
+        Some(node)
+      } else {
+        None
       }
-      directNodeByBcuid.put(node.bcuid, node)
-      node_bits = node_bits.setBit(node.node_idx);
-      directNodeByIdx.put(node.node_idx, node);
-      Some(node)
-    } else {
-      None
     }
   }
 
@@ -61,7 +65,7 @@ class Network() extends OLog //
         log.debug("directNode exists in DirectNode bcuid=" + node.bcuid);
         false
       } else if (pendingNodeByBcuid.contains(node.bcuid)) {
-        log.debug("pendingNode exists PendingNodes bcuid=" + node.bcuid);
+        //        log.debug("pendingNode exists PendingNodes bcuid=" + node.bcuid);
         false
       } else {
         pendingNodeByBcuid.put(node.bcuid, node);
@@ -70,10 +74,9 @@ class Network() extends OLog //
       }
     }
   }
-  def pending2DirectNode(nodes: List[PNode], checkBits: BigInt): Boolean = {
+  def pending2DirectNode(nodes: List[PNode]): Boolean = {
     this.synchronized {
       nodes.map { node =>
-        removePendingNode(node)
         addDNode(node)
       }.filter { _ == None }.size == 0
     }
@@ -124,6 +127,21 @@ object Networks extends LogHelper {
       {
         log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
         MessageSender.postMessage("VOTPZP", body, n)
+      })
+  }
+  def wallOutsideMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
+    instance.directNodes.map { n =>
+      if (!NodeInstance.isLocal(n)) {
+        log.debug("post to directNode:bcuid=" + n.bcuid + ",messageid=" + messageId);
+        MessageSender.postMessage(gcmd, body, n);
+      }
+    }
+    instance.pendingNodes.map(n =>
+      {
+        if (!NodeInstance.isLocal(n)) {
+          log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
+          MessageSender.postMessage("VOTPZP", body, n)
+        }
       })
   }
 }

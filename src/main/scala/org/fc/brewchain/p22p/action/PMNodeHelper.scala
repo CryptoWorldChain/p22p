@@ -18,6 +18,7 @@ trait PMNodeHelper {
     PMNodeInfo.newBuilder().setAddress(n.address).setNodeName(n.name).setPort(n.port)
       .setProtocol(n.protocol)
       .setNodeIdx(n.node_idx)
+      .setSign(n.sign)
       .setPubKey(n.pub_key).setStartupTime(n.startup_time).setTryNodeIdx(n.try_node_idx).setBcuid(n.bcuid)
       .setSendCc(n.counter.send.get).setRecvCc(n.counter.recv.get).setBlockCc(n.counter.blocks.get)
   }
@@ -25,6 +26,7 @@ trait PMNodeHelper {
   def toFullPMNode(n: PNode = NodeInstance.root()): PMNodeInfo.Builder = {
     PMNodeInfo.newBuilder().setAddress(n.address).setNodeName(n.name).setPort(n.port)
       .setProtocol(n.protocol)
+      .setSign(n.sign)
       .setPubKey(n.pub_key).setStartupTime(n.startup_time).setTryNodeIdx(n.try_node_idx).setBcuid(n.bcuid)
       .setPriKey(n.pri_key).setNodeIdx(n.node_idx)
       .setSendCc(n.counter.send.get).setRecvCc(n.counter.recv.get).setBlockCc(n.counter.blocks.get)
@@ -42,6 +44,7 @@ trait PMNodeHelper {
   def fromPMNode(pm: PMNodeInfoOrBuilder): PNode = {
     PNode(
       name = pm.getNodeName, node_idx = pm.getNodeIdx, //node info
+      sign = pm.getSign,
       protocol = pm.getProtocol, address = pm.getAddress, port = pm.getPort, //
       startup_time = pm.getStartupTime, //
       pub_key = pm.getPubKey, //

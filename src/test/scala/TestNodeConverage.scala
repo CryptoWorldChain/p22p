@@ -26,7 +26,7 @@ object TestNodeConverge extends OLog {
     val networks = new ListBuffer[Network]();
     val nodesMap = new HashMap[String, PNode]();
     for (i <- 0 to nodeCount - 1) {
-      val node = new PNode(name = "a" + i, node_idx = i);
+      val node = new PNode(name = "a" + i, node_idx = i,"");
       nodes.+=(node);
       networks.append(new Network())
     }
@@ -82,7 +82,7 @@ object TestNodeConverge extends OLog {
         }
       }
     }, 5, 5, TimeUnit.SECONDS)
-    val rootn = PNode("ROOT", -1);
+    val rootn = PNode("ROOT", -1,"");
     Scheduler.scheduleWithFixedDelay(new Runnable {
       def run() = {
         val net = networks((Math.random() * nodeCount % nodeCount).asInstanceOf[Int]);

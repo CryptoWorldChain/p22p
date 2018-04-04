@@ -19,7 +19,7 @@ import org.brewchain.bcapi.gens.Oentity.OKey
 import org.slf4j.MDC
 import org.fc.brewchain.p22p.utils.LogHelper
 
-object NodeInstance extends OLog with PMNodeHelper with LogHelper{
+object NodeInstance extends OLog with PMNodeHelper with LogHelper {
   //  val node_name = NodeHelper.getCurrNodeName
   val NODE_ID_PROP = "org.bc.node.id"
   val PROP_NODE_INFO = "zp.bc.node.info";
@@ -32,6 +32,10 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper{
 
   def isLocalNode(node: PNode): Boolean = {
     node == root || root.bcuid.equals(node.bcuid)
+  }
+
+  def isLocalNode(bcuid: String): Boolean = {
+    root.bcuid.equals(bcuid)
   }
   def getFromDB(key: String, defaultv: String): String = {
     val v = Daos.odb.get(OKey.newBuilder().setData(ByteString.copyFrom(key.getBytes)).build())
@@ -61,7 +65,7 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper{
   }
   def newNode(nodeidx: Int = -1): PNode = {
     val kp = EncHelper.newKeyPair()
-    val newroot = PNode(NodeHelper.getCurrNodeName, node_idx = nodeidx, protocol = "tcp",
+    val newroot = PNode.signNode(NodeHelper.getCurrNodeName, node_idx = nodeidx, protocol = "tcp",
       address = NodeHelper.getCurrNodeListenOutAddr,
       NodeHelper.getCurrNodeListenOutPort,
       System.currentTimeMillis(), kp.pubkey,
@@ -98,18 +102,17 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper{
           case e: Throwable =>
             log.warn("unknow Error.", e)
         } finally {
-          if (NodeInstance.root() != null)
-          {
+          if (NodeInstance.root() != null) {
             MDCSetBCUID()
           }
         }
       }
     }
   }
-  def resetRoot(node:PNode):Unit = {
+  def resetRoot(node: PNode): Unit = {
     this.rootnode = node;
   }
-  def changeNodeIdx(test_bits: BigInteger = new BigInteger("0")): Int = {
+  def changeNodeIdx(test_bits: BigInt = BigInt("0")): Int = {
     this.synchronized {
       var v = 0;
       do {

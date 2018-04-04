@@ -14,28 +14,40 @@ object VoteQueue extends LogHelper {
   val outQ = new ConcurrentLinkedQueue[PVBase]();
 
   def appendInQ(pbo: PVBase) = {
+
     StateStorage.mergeViewState(pbo) match {
       case Some(ov) if ov == null =>
+        log.debug("drop message because ov is null:V=" + pbo.getV + ",S=" + pbo.getState + ",F=" + pbo.getFromBcuid + ",O=" + pbo.getOriginBcuid
+          + ",RJ=" + pbo.getRejectState)
         PBFTStage.NOOP
       case Some(ov) if ov != null =>
         pbo.getState match {
+          case PBFTStage.PENDING_SEND =>
+            inQ.offer((pbo, ov, PBFTStage.PRE_PREPARE));
+
           case PBFTStage.PRE_PREPARE =>
-            StateStorage.updateNodeStage(pbo, PBFTStage.PREPARE)
-            if (pbo.getRejectState != PBFTStage.REJECT) {
-              inQ.offer((pbo, ov, PBFTStage.PREPARE));
-              log.debug("Qsize=" + inQ.size())
+            if (StateStorage.updateNodeStage(pbo, PBFTStage.PRE_PREPARE) != PBFTStage.DUPLICATE) {
+              if (pbo.getRejectState != PBFTStage.REJECT) {
+                inQ.offer((pbo, ov, PBFTStage.PREPARE));
+                log.debug("Qsize=" + inQ.size())
+              } else {
+                inQ.offer((pbo, ov, PBFTStage.REJECT));
+              }
             }
 
           case PBFTStage.PREPARE =>
-            StateStorage.updateNodeStage(pbo, pbo.getState)
-            if (pbo.getRejectState != PBFTStage.REJECT) {
-              inQ.offer((pbo, ov, PBFTStage.COMMIT));
+            if (StateStorage.updateNodeStage(pbo, pbo.getState) != PBFTStage.DUPLICATE) {
+              if (pbo.getRejectState != PBFTStage.REJECT) {
+                inQ.offer((pbo, ov, PBFTStage.COMMIT));
+              } else {
+                inQ.offer((pbo, ov, PBFTStage.REJECT));
+              }
             }
           case PBFTStage.COMMIT =>
             StateStorage.updateNodeStage(pbo, pbo.getState)
-            if (pbo.getRejectState != PBFTStage.REJECT) {
-              inQ.offer((pbo, ov, PBFTStage.REPLY));
-            }
+            //            if (pbo.getRejectState != PBFTStage.REJECT) {
+            inQ.offer((pbo, ov, PBFTStage.REPLY));
+          //            }
           case PBFTStage.REPLY =>
             StateStorage.saveStageV(pbo, ov.build());
             log.info("MergeSuccess.Remote!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
@@ -45,7 +57,10 @@ object VoteQueue extends LogHelper {
         }
 
       case None =>
-        inQ.offer((pbo, null, PBFTStage.REJECT));
+        if(pbo.getRejectState != PBFTStage.REJECT)
+        {
+          inQ.offer((pbo, null, PBFTStage.REJECT));
+        }
         PBFTStage.REJECT
     }
 

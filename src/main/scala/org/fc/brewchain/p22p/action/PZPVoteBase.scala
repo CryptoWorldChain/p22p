@@ -56,12 +56,12 @@ object PZPVoteBase extends PSMPZP[PVBase] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with PMNodeHelper with LogHelper {
   override def onPBPacket(pack: FramePacket, pbo: PVBase, handler: CompleteHandler) = {
-    MDCSetMessageID(pbo.getMTypeValue+"."+pbo.getMessageUid)
+    MDCSetMessageID(pbo.getMTypeValue+"|"+pbo.getMessageUid)
     if (NodeInstance.root() != null) {
       MDCSetBCUID()
     }
 
-    log.info("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN="+pbo.getStoreNum+",VC="+pbo.getViewCounter+ ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
+    log.debug("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN="+pbo.getStoreNum+",VC="+pbo.getViewCounter+ ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
       + ",Rejct=" + pbo.getRejectState)
 
     var ret = PRetJoin.newBuilder();
