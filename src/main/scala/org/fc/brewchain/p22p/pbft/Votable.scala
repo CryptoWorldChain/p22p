@@ -41,7 +41,7 @@ trait Votable extends OLog {
         case Some(str: String) if str.equals(Config.STR_REJECT) =>
           Converge(PBFTStage.REJECT);
         case None =>
-          NotConverge();
+          Converge(PBFTStage.REJECT);
         case _ =>
           Converge(pbo.getState);
       }

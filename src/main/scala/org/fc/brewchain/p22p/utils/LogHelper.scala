@@ -9,7 +9,10 @@ trait LogHelper extends OLog {
   def getAbr(str: String) = StringUtils.abbreviateMiddle(str, "..", 8);
 //  def MDCSetBCUID(bcuid: String) = MDC.put("BCUID", getAbr(bcuid));
   
-  def MDCSetBCUID() = MDC.put("BCUID",getAbr(NodeInstance.root().bcuid));
+  def MDCSetBCUID() = {
+    MDC.put("BCUID",getAbr(NodeInstance.root().bcuid));
+    System.setProperty("LOGROOT",NodeInstance.root().bcuid);
+  }
   
   def MDCSetMessageID(msgid: String) = MDC.put("MessageID", msgid);
   def MDCRemoveMessageID() = MDC.remove("MessageID");
