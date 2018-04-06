@@ -14,8 +14,12 @@ enum PCommand {
 	VOT = 4;//PBFT投票
 	
 	VTI = 5;//stateview的信息
+
+	RRR = 6;//消息路由
 	
 	HBT = 10;//HeartBeat!检查心跳
+	
+	TTT = 30;//ping,pong,wall ,tesing
 };
 
 message PMNodeInfo{
@@ -158,3 +162,85 @@ message PRetVoteState{
 	repeated NodeStateInfo	nodes = 5;//所有节点的信息 
 }
 
+
+
+
+enum TestMessageType{
+	WALL  = 0;
+	PING  = 1;
+	PONG  = 2;
+	
+}
+message PSTestMessage{
+	string content = 1;//消息字段
+	TestMessageType type = 2;//
+	int64 wall_time = 3;
+	int64 recv_time = 4;
+	string messageid = 5;
+	string org_bcuid = 6;
+	string from_bcuid = 7;
+	bool dwall = 8;
+	bool block = 10;
+	int64 ps = 9 ;
+}
+
+message PRetTestMessage{
+	int32 ret_code = 1;//返回
+	string ret_message = 2;//返回信息
+
+	int32 dnode_count = 3;
+	int32 pending_count = 4;
+	
+	string bitencs = 5;
+}
+ 
+
+message PSRouteMessage {
+	
+	enum PBNodeType{
+		PB_EMPTY = 0;
+		PB_FULLNODE = 1;
+		PB_FLAT_SET = 2;
+		PB_NODE_SET = 3;
+		PB_DEEP_TREE_SET = 4;
+	}
+	message PBFlatSet{
+		int32 fromIdx = 1;
+		string nextHops_enc = 2; 
+	}
+
+	message PBNode{
+		PBNodeType pbnt = 1;
+		bytes data = 2;
+	}
+	message PBNodeSet{
+		repeated PBNode nodes = 1;
+	}
+
+	message PBDeepTreeSet{
+		int32 fromIdx = 1 ;
+		PBNodeSet treeHops = 2 ;
+	}
+	
+	enum PBRouteMsgType{
+		PM_VBASE = 0;
+		PM_TEST = 1;
+	}
+	
+	string gcmd = 1;
+	bytes body = 2;
+	int32 fromIdx = 3;
+	PBNode nextHops = 4;
+	string network = 5;
+	string messageid = 6;
+	PBRouteMsgType msgtype = 7;
+	string encbits = 8;
+}
+
+message PRetRouteMessage {
+	int32 ret_code = 1;//返回
+	string ret_message = 2;//返回信息
+	int32 dnode_count = 3;
+	int32 pending_count = 4;
+	string bitencs = 5;
+}

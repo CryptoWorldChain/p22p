@@ -48,7 +48,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
         totalbits = totalbits.clearBit(pn.try_node_idx)
       }
       log.debug("totalbits::" + oldtotalbits.toString(16) + "-->" + totalbits.toString(16)
-        + ":pbpendinCount=" + vb.getPendingNodesCount
+        + ":pbpendinCount=" + vb.getPendingNodesCount+":"+vb.getNodeBitsEnc
         + ":pendingInList::" + pendingInList.foldLeft(",")((A, p) => A + p.getBcuid + ","))
 
       //1. check encbits. for direct nodes 

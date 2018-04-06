@@ -63,6 +63,9 @@ object JoinNetwork extends SRunner {
                   sameNodes.put(n.uri.hashCode(), n);
                   duplictedInfoNodes.+=(n.uri.hashCode() -> n);
                   MessageSender.dropNode(n)
+                  val newN = fromPMNode(retjoin.getMyInfo)
+                  MessageSender.changeNodeName(n.bcuid, newN.bcuid);
+                  Networks.instance.addPendingNode(newN);
                 } else if (retjoin.getRetCode() == 0) {
                   joinedNodes.put(n.uri.hashCode(), n);
                   val newN = fromPMNode(retjoin.getMyInfo)
@@ -70,8 +73,10 @@ object JoinNetwork extends SRunner {
                   Networks.instance.addPendingNode(newN);
                   retjoin.getNodesList.map { node =>
                     val pnode = fromPMNode(node);
-                    Networks.instance.addPendingNode(pnode)
-                    pendingJoinNodes.put(node.getBcuid, pnode);
+                    if(Networks.instance.addPendingNode(pnode))
+                    {
+                      pendingJoinNodes.put(node.getBcuid, pnode);
+                    }
                     //
                   }
                 }

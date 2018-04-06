@@ -63,7 +63,7 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
         log.debug("directnodes==" + _pn)
         ret.addDnodes(toPMNode(_pn));
       }
-      ret.setBitEncs(BitMap.hexToMapping(Networks.instance.node_bits));
+      ret.setBitEncs(Networks.instance.node_strBits);
 
     } catch {
       case fe: NodeInfoDuplicated => {

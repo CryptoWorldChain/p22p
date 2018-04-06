@@ -37,7 +37,7 @@ object LayerNodeTask extends OLog with Runnable {
     //add myself
     Networks.instance.addPendingNode(NodeInstance.root())
     
-    Scheduler.scheduleWithFixedDelay(JoinNetwork, 5, 60, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(JoinNetwork, 5, 10, TimeUnit.SECONDS)
     Scheduler.scheduleWithFixedDelay(CheckingHealthy, 10, Config.TICK_CHECK_HEALTHY, TimeUnit.SECONDS)
     Scheduler.scheduleWithFixedDelay(VoteNodeMap, 10, Config.TICK_VOTE_MAP, TimeUnit.SECONDS)
     Scheduler.scheduleWithFixedDelay(VoteWorker, 10, Config.TICK_VOTE_WORKER, TimeUnit.SECONDS)

@@ -44,7 +44,7 @@ object VoteNodeMap extends SRunner {
       vbase.setMType(PVType.NETWORK_IDX)
       var pendingbits = BigInt(1)
       //init. start to vote.
-      if (JoinNetwork.pendingJoinNodes.size() / 2 > Networks.instance.onlineMap.size || JoinNetwork.pendingJoinNodes.size() < 1) {
+      if (JoinNetwork.pendingJoinNodes.size() / 2 > Networks.instance.onlineMap.size ) {
         log.info("cannot vote for pendingJoinNodes Size bigger than online half:PendJoin=" +
           JoinNetwork.pendingJoinNodes.size() + ": Online=" + Networks.instance.onlineMap.size)
         //for fast load
@@ -68,7 +68,7 @@ object VoteNodeMap extends SRunner {
           )
 
         vbody.setPendingBitsEnc(BitMap.hexToMapping(pendingbits))
-        vbody.setNodeBitsEnc(BitMap.hexToMapping(Networks.instance.node_bits))
+        vbody.setNodeBitsEnc(Networks.instance.node_strBits)
         vbase.setContents(toByteSting(vbody))
         //      vbase.addVoteContents(Any.pack(vbody.build()))
         //      if (Networks.instance.node_bits.bitCount <= 0) {
@@ -93,7 +93,7 @@ object VoteNodeMap extends SRunner {
         (Config.MAX_VOTE_SLEEP_MS - Config.MIN_VOTE_SLEEP_MS) + Config.MIN_VOTE_WITH_NOCHANGE_SLEEP_MS
       }
       this.synchronized {
-        this.wait((Math.random() * sleepTime).asInstanceOf[Int]);
+        this.wait((Math.random() * sleepTime + Config.MIN_VOTE_SLEEP_MS).asInstanceOf[Int]);
       }
     } catch {
       case e: Throwable =>

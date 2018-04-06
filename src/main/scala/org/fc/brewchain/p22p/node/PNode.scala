@@ -23,10 +23,9 @@ import onight.tfw.outils.serialize.UUIDGenerator
 import onight.tfw.outils.conf.PropHelper
 import org.apache.commons.codec.binary.Base64
 import org.fc.brewchain.bcapi.crypto.EncHelper
+import org.fc.brewchain.p22p.core.MessageSender
 
 sealed trait Node
-
-case class NoneNode() extends Node
 
 case class PNode(name: String, node_idx: Int, //node info
     sign: String,
@@ -40,9 +39,10 @@ case class PNode(name: String, node_idx: Int, //node info
 
   def uri(): String = protocol + "://" + address + ":" + port;
 
-  def processMessage(msg: FramePacket, from: PNode): Unit = {
+  def processMessage(gcmd: String, body: Message): Unit = {
     //    counter.recv.incrementAndGet()
-    //    log.debug("procMessage:@" + this.node_idx + ",from=" + from.node_idx + ",msg:" + msg)
+    log.debug("procMessage:@" + this.node_idx + ",bcuid=" + bcuid + ",gcmd:" + gcmd)
+    MessageSender.postMessage(gcmd, body, this)
   }
 
   override def toString(): String = {
@@ -75,7 +75,7 @@ object PNode {
     counter: CCSet = CCSet(),
     try_node_idx: Int = 0,
     bcuid: String = UUIDGenerator.generate(),
-    pri_key: String = null):PNode= {
+    pri_key: String = null): PNode = {
     if (pri_key != null) {
       PNode(name, node_idx, EncHelper.ecSign(pri_key, Array(node_idx, protocol, address, port, bcuid).mkString("|").getBytes),
         protocol, address, port, //

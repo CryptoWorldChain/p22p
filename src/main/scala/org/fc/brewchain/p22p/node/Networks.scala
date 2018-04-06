@@ -13,7 +13,11 @@ import scala.collection.Iterable
 import onight.tfw.otransio.api.beans.FramePacket
 import org.fc.brewchain.p22p.node.router.CircleNR
 import org.fc.brewchain.p22p.utils.LogHelper
+import org.fc.brewchain.bcapi.crypto.BitMap
 
+case class BitEnc(bits: BigInt) {
+  val strEnc: String = BitMap.hexToMapping(bits);
+}
 class Network() extends OLog //
 {
   val directNodeByBcuid: Map[String, PNode] = Map.empty[String, PNode];
@@ -22,8 +26,24 @@ class Network() extends OLog //
   val connectedMap: Map[Int, Map[Int, Int]] = Map.empty[Int, Map[Int, Int]];
   val onlineMap: Map[String, PNode] = Map.empty[String, PNode];
 
-  var node_bits = BigInt(0)
-  def nodeByBcuid(name: String): Node = directNodeByBcuid.getOrElse(name, NoneNode());
+  //  var _node_bits = BigInt(0)
+  var bitenc = BitEnc(BigInt(0))
+
+  def node_bits(): BigInt = bitenc.bits
+  def node_strBits(): String = bitenc.strEnc;
+
+  def resetNodeBits(_new: BigInt): Unit = {
+    this.synchronized {
+      bitenc = BitEnc(_new)
+      circleNR = CircleNR(_new)
+    }
+  }
+
+  var circleNR: CircleNR = CircleNR(node_bits())
+
+  val noneNode = PNode(name = "NONE", node_idx = 0, "",
+    try_node_idx = 0)
+  def nodeByBcuid(name: String): PNode = directNodeByBcuid.getOrElse(name, noneNode);
   def nodeByIdx(idx: Int) = directNodeByIdx.get(idx);
 
   def directNodes: Iterable[PNode] = directNodeByBcuid.values
@@ -34,12 +54,13 @@ class Network() extends OLog //
 
     val node = pnode.changeIdx(pnode.try_node_idx)
     this.synchronized {
-      if (!directNodeByBcuid.contains(node.bcuid) && node.node_idx >= 0 && !node_bits.testBit(node.node_idx)) {
+      if (!directNodeByBcuid.contains(node.bcuid) && node.node_idx >= 0 && !node_bits().testBit(node.node_idx)) {
         if (StringUtils.equals(node.bcuid, NodeInstance.root().bcuid)) {
           NodeInstance.resetRoot(node)
         }
         directNodeByBcuid.put(node.bcuid, node)
-        node_bits = node_bits.setBit(node.node_idx);
+        resetNodeBits(node_bits.setBit(node.node_idx));
+
         directNodeByIdx.put(node.node_idx, node);
         removePendingNode(node)
         Some(node)
@@ -51,7 +72,7 @@ class Network() extends OLog //
 
   def removeDNode(node: PNode): Option[PNode] = {
     if (directNodeByBcuid.contains(node.bcuid)) {
-      node_bits = node_bits.clearBit(node.node_idx);
+      resetNodeBits(node_bits.clearBit(node.node_idx));
       directNodeByBcuid.remove(node.bcuid)
     } else {
       None
@@ -112,22 +133,57 @@ class Network() extends OLog //
         //      log.debug("map="+connectedMap)
       }
   }
+
+  def wallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
+    if (circleNR.encbits.bitCount > 0) {
+      log.debug("wall to direct:" + messageId + ",dnodescount=" + directNodes.size + ",enc=" +
+        node_strBits())
+      circleNR.broadcastMessage(gcmd, body)(network = this)
+    }
+    pendingNodes.map(n =>
+      {
+        log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
+        MessageSender.postMessage(gcmd, body, n)
+      })
+  }
+
+  def bwallMessage(gcmd: String, body: Message, bits: BigInt, messageId: String = ""): Unit = {
+    directNodes.map(n =>
+      if (bits.testBit(n.node_idx)) {
+        log.debug("bitpost to direct:bcuid=" + n.bcuid + ",messageid=" + messageId);
+        MessageSender.postMessage(gcmd, body, n)
+      })
+    pendingNodes.map(n =>
+      if (bits.testBit(n.try_node_idx)) {
+        log.debug("bitpost to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
+        MessageSender.postMessage(gcmd, body, n)
+      })
+  }
+
+  def dwallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
+    directNodes.map(n =>
+      {
+        log.debug("post to direct:bcuid=" + n.bcuid + ",messageid=" + messageId);
+        MessageSender.postMessage(gcmd, body, n)
+      })
+    pendingNodes.map(n =>
+      {
+        log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
+        MessageSender.postMessage(gcmd, body, n)
+      })
+  }
 }
 object Networks extends LogHelper {
   val instance: Network = new Network();
-  def forwardMessage(fp: FramePacket) {
-    CircleNR.broadcastMessage(fp)(NodeInstance.root(), network = instance)
-  }
+  //  def forwardMessage(fp: FramePacket) {
+  ////    CircleNR.broadcastMessage(fp)(NodeInstance.root(), network = instance)
+  //  }
   def wallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
-    instance.directNodes.map { n =>
-      log.debug("post to directNode:bcuid=" + n.bcuid + ",messageid=" + messageId);
-      MessageSender.postMessage(gcmd, body, n);
-    }
-    instance.pendingNodes.map(n =>
-      {
-        log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage("VOTPZP", body, n)
-      })
+    instance.wallMessage(gcmd, body, messageId);
+  }
+
+  def dwallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
+    instance.dwallMessage(gcmd, body, messageId);
   }
   def wallOutsideMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
     instance.directNodes.map { n =>

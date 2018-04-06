@@ -54,8 +54,14 @@ object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with P
           log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid);
           throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
         } else if (Networks.instance.node_bits.testBit(from.getTryNodeIdx)) {
-          log.info("nodebits duplicated NodeIdx :" + from.getNodeIdx);
-          throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
+          Networks.instance.nodeByIdx(from.getTryNodeIdx) match {
+            case Some(n) if n.bcuid.endsWith(from.getBcuid) =>
+              log.debug("node backon line ")
+              Networks.instance.onlineMap.put(n.bcuid, n);
+            case _ =>
+              log.info("nodebits duplicated NodeIdx :" + from.getNodeIdx);
+              throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
+          }
         } else {
           //name, idx, protocol, address, port, startup_time, pub_key, counter,idx
           val n = fromPMNode(from);
@@ -80,6 +86,10 @@ object PZPNodeJoinService extends OLog with PBUtils with LService[PSJoin] with P
 
       Networks.instance.directNodes.map { _pn =>
         log.debug("direct.node==" + _pn.bcuid)
+        ret.addNodes(toPMNode(_pn));
+      }
+       Networks.instance.pendingNodes.map { _pn =>
+        log.debug("pending.node==" + _pn.bcuid)
         ret.addNodes(toPMNode(_pn));
       }
     } catch {

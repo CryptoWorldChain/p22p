@@ -9,11 +9,12 @@ import scala.math.BigInt
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.Networks
 import onight.oapi.scala.traits.OLog
+import com.google.protobuf.Message
 
 object RandomNR extends MessageRouter with OLog {
   def getRand() = Math.random(); //DHTConsRand.getRandFactor()
 
-  override def routeMessage(packet: FramePacket)(implicit from: PNode = NodeInstance.root, //
+  override def routeMessage(gcmd:String,body: Message)(implicit from: PNode = NodeInstance.root, //
     nextHops: IntNode = FullNodeSet(),
     network: Network = Networks.instance) {
     //    log.debug("routeMessage:from=" + from.node_idx + ",next=" + nextHops)
@@ -51,7 +52,7 @@ object RandomNR extends MessageRouter with OLog {
         }
         startNodeSets.map { sn =>
           val (setid, node) = sn
-          broadcastMessage(packet, from)(node,
+          broadcastMessage(gcmd,body)(node,
             FlatSet(node.node_idx, mapSets.getOrElse(setid, BigInt(0))), network)
         }
       //

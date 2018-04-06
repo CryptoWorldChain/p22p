@@ -12,29 +12,29 @@ import org.fc.brewchain.p22p.node.Network
 
 trait MessageRouter extends OLog {
 
-  def broadcastMessage(packet: FramePacket, from: PNode = NodeInstance.root)(implicit to: PNode = NodeInstance.root,
+  def broadcastMessage(gcmd:String,body: Message, from: PNode = NodeInstance.root)(implicit to: PNode = NodeInstance.root,
     nextHops: IntNode = FullNodeSet(),
     network: Network = Networks.instance): Unit = {
 //        log.debug("broadcastMessage:cur=@" + to.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
     to.counter.recv.incrementAndGet();
     //    from.counter.send.incrementAndGet();
 //    network.updateConnect(from.node_idx,to.node_idx)
-      
-    to.processMessage(packet, from)
+     
+    to.processMessage(gcmd,body)
     nextHops match {
       case f: FullNodeSet =>
         from.counter.send.incrementAndGet();
-        routeMessage(packet)(to, FlatSet(from.node_idx, network.node_bits), network)
+        routeMessage(gcmd,body)(to, FlatSet(from.node_idx, network.node_bits), network)
       case none: EmptySet =>
         log.debug("Leaf Node");
       case subset: IntNode =>
         from.counter.send.incrementAndGet();
-        routeMessage(packet)(to, subset, network)
+        routeMessage(gcmd,body)(to, subset, network)
     }
 
   }
 
-  def routeMessage(packet: FramePacket)(implicit from: PNode = NodeInstance.root,
+  def routeMessage(gcmd:String,body: Message)(implicit from: PNode = NodeInstance.root,
     nextHops: IntNode = FullNodeSet(),
     network: Network = Networks.instance)
 }
