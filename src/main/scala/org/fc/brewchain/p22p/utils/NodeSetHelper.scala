@@ -3,7 +3,6 @@ package org.fc.brewchain.p22p.utils
 import org.apache.commons.lang3.StringUtils
 import org.slf4j.MDC
 import onight.oapi.scala.traits.OLog
-import org.fc.brewchain.p22p.node.NodeInstance
 import org.fc.brewchain.p22p.node.router._
 import org.fc.brewchain.p22p.pbgens.P22P.PSRouteMessage.PBNodeType
 import org.fc.brewchain.p22p.pbgens.P22P.PSRouteMessage.PBNode

@@ -3,7 +3,6 @@ package org.fc.brewchain.p22p.action
 import org.fc.brewchain.p22p.node.PNode
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfoOrBuilder
-import org.fc.brewchain.p22p.node.NodeInstance
 import org.fc.brewchain.p22p.stat.MessageCounter.CCSet
 import onight.tfw.outils.serialize.ProtobufSerializer
 import onight.tfw.outils.serialize.ISerializer
@@ -11,10 +10,16 @@ import onight.tfw.outils.serialize.SerializerFactory
 import org.apache.commons.codec.binary.Base64
 import com.google.protobuf.MessageOrBuilder
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.node.Network
+import org.fc.brewchain.p22p.node.Networks
 
 trait PMNodeHelper {
 
-  def toPMNode(n: PNode = NodeInstance.root()): PMNodeInfo.Builder = {
+  def networkByID(nid: String): Network = {
+    Networks.networkByID(nid);
+  }
+
+  def toPMNode(n: PNode): PMNodeInfo.Builder = {
     PMNodeInfo.newBuilder().setAddress(n.address).setNodeName(n.name).setPort(n.port)
       .setProtocol(n.protocol)
       .setNodeIdx(n.node_idx)
@@ -23,7 +28,7 @@ trait PMNodeHelper {
       .setSendCc(n.counter.send.get).setRecvCc(n.counter.recv.get).setBlockCc(n.counter.blocks.get)
   }
 
-  def toFullPMNode(n: PNode = NodeInstance.root()): PMNodeInfo.Builder = {
+  def toFullPMNode(n: PNode): PMNodeInfo.Builder = {
     PMNodeInfo.newBuilder().setAddress(n.address).setNodeName(n.name).setPort(n.port)
       .setProtocol(n.protocol)
       .setSign(n.sign)
@@ -33,7 +38,7 @@ trait PMNodeHelper {
   }
   val pser = SerializerFactory.getSerializer(SerializerFactory.SERIALIZER_PROTOBUF)
 
-  def serialize(n: PNode = NodeInstance.root()): String = {
+  def serialize(n: PNode): String = {
     Base64.encodeBase64String(toBytes(toFullPMNode(n)))
   }
 
@@ -43,15 +48,15 @@ trait PMNodeHelper {
 
   def fromPMNode(pm: PMNodeInfoOrBuilder): PNode = {
     PNode(
-      name = pm.getNodeName, node_idx = pm.getNodeIdx, //node info
-      sign = pm.getSign,
+      _name = pm.getNodeName, _node_idx = pm.getNodeIdx, //node info
+      _sign = pm.getSign,
       protocol = pm.getProtocol, address = pm.getAddress, port = pm.getPort, //
-      startup_time = pm.getStartupTime, //
-      pub_key = pm.getPubKey, //
-      counter = new CCSet(pm.getRecvCc, pm.getSendCc, pm.getBlockCc),
-      try_node_idx = pm.getTryNodeIdx,
-      bcuid = pm.getBcuid,
-      pri_key = pm.getPriKey)
+      _startup_time = pm.getStartupTime, //
+      _pub_key = pm.getPubKey, //
+      _counter = new CCSet(pm.getRecvCc, pm.getSendCc, pm.getBlockCc),
+      _try_node_idx = pm.getTryNodeIdx,
+      _bcuid = pm.getBcuid,
+      _pri_key = pm.getPriKey)
   }
 
   def toBytes(body: MessageOrBuilder): Array[Byte] = {
@@ -64,6 +69,6 @@ trait PMNodeHelper {
   def fromByteSting[T](str: ByteString, clazz: Class[T]): T = {
     pser.deserialize(str.toByteArray(), clazz)
   }
-  
+
 }
 

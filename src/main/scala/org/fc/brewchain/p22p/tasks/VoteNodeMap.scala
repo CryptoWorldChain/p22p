@@ -2,7 +2,6 @@ package org.fc.brewchain.p22p.tasks
 
 import java.util.concurrent.TimeUnit
 import onight.oapi.scala.traits.OLog
-import org.fc.brewchain.p22p.node.NodeInstance
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PBVoteNodeIdx
 import java.math.BigInteger
@@ -27,9 +26,10 @@ import org.fc.brewchain.p22p.pbgens.P22P.PVType
 import onight.tfw.outils.serialize.UUIDGenerator
 import org.fc.brewchain.p22p.utils.Config
 import org.fc.brewchain.p22p.pbft.VoteQueue
+import org.fc.brewchain.p22p.node.Network
 
 //投票决定当前的节点
-object VoteNodeMap extends SRunner {
+case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner {
   def getName() = "VoteNodeMap"
   def runOnce() = {
     log.debug("VoteNodeMap :Run----Try to Vote Node Maps");
@@ -37,28 +37,29 @@ object VoteNodeMap extends SRunner {
     try {
 
       Thread.currentThread().setName("VoteNodeMap");
-      log.info("CurrentPNodes:PendingSize=" + Networks.instance.pendingNodes.size + ",DirectNodeSize=" + Networks.instance.directNodes.size);
+      log.info("CurrentPNodes:PendingSize=" + network.pendingNodes.size + ",DirectNodeSize=" + network.directNodes.size);
       val vbase = PVBase.newBuilder();
 
       vbase.setState(PBFTStage.PENDING_SEND)
       vbase.setMType(PVType.NETWORK_IDX)
       var pendingbits = BigInt(1)
       //init. start to vote.
-      if (JoinNetwork.pendingJoinNodes.size() / 2 > Networks.instance.onlineMap.size ) {
+      if (network.joinNetwork.pendingJoinNodes.size() / 2 > network.onlineMap.size) {
         log.info("cannot vote for pendingJoinNodes Size bigger than online half:PendJoin=" +
-          JoinNetwork.pendingJoinNodes.size() + ": Online=" + Networks.instance.onlineMap.size)
+          network.joinNetwork.pendingJoinNodes.size() + ": Online=" + network.onlineMap.size)
         //for fast load
-      } else if (StateStorage.nextV(vbase) > 0) {
+      } else if (network.stateStorage.nextV(vbase) > 0) {
         vbase.setMessageUid(UUIDGenerator.generate())
-        vbase.setOriginBcuid(NodeInstance.root().bcuid)
-        vbase.setFromBcuid(NodeInstance.root.bcuid);
+        vbase.setOriginBcuid(network.root().bcuid)
+        vbase.setFromBcuid(network.root().bcuid);
         vbase.setLastUpdateTime(System.currentTimeMillis())
+        vbase.setNid(network.netid);
         val vbody = PBVoteNodeIdx.newBuilder();
-        var bits = Networks.instance.node_bits;
+        var bits = network.node_bits;
         pendingbits = BigInt(0)
 
-        Networks.instance.pendingNodes.map(n =>
-          //          if (Networks.instance.onlineMap.contains(n.bcuid)) {
+        network.pendingNodes.map(n =>
+          //          if (network.onlineMap.contains(n.bcuid)) {
           if (bits.testBit(n.try_node_idx)) {
             log.debug("error in try_node_idx @n=" + n.name + ",try=" + n.try_node_idx + ",bits=" + bits);
           } else { //no pub keys
@@ -68,20 +69,20 @@ object VoteNodeMap extends SRunner {
           )
 
         vbody.setPendingBitsEnc(BitMap.hexToMapping(pendingbits))
-        vbody.setNodeBitsEnc(Networks.instance.node_strBits)
+        vbody.setNodeBitsEnc(network.node_strBits)
         vbase.setContents(toByteSting(vbody))
         //      vbase.addVoteContents(Any.pack(vbody.build()))
-        //      if (Networks.instance.node_bits.bitCount <= 0) {
+        //      if (network.node_bits.bitCount <= 0) {
         //        log.debug("networks has not directnode!")
         log.info("vote -- Nodes:" + vbody.getNodeBitsEnc + ",pendings=" + vbody.getPendingBitsEnc);
         vbase.setV(vbase.getV);
-        vbase.setN(Networks.instance.pendingNodes.size + Networks.instance.directNodes.size);
+        vbase.setN(network.pendingNodes.size + network.directNodes.size);
 
         log.info("broadcast Vote Message:V=" + vbase.getV + ",N=" + vbase.getN + ",from=" + vbase.getFromBcuid
           + ",SN=" + vbase.getStoreNum + ",VC=" + vbase.getViewCounter + ",messageid=" + vbase.getMessageUid)
         val vbuild = vbase.build();
         //        Networks.wallMessage("VOTPZP", vbuild);
-        VoteQueue.appendInQ(vbase.setState(PBFTStage.PENDING_SEND).build())
+        voteQueue.appendInQ(vbase.setState(PBFTStage.PENDING_SEND).build())
       }
       //      }
       //    NodeInstance.forwardMessage("VOTPZP", vbody.build());

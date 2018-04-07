@@ -17,10 +17,10 @@ import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.bcapi.crypto.BitMap
 import org.apache.commons.lang3.StringUtils
-import org.fc.brewchain.p22p.node.NodeInstance
+import org.fc.brewchain.p22p.node.Network
 
 object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
-  def makeDecision(pbo: PVBase, reallist: List[OPair]): Option[String] = {
+  def makeDecision(network: Network,pbo: PVBase, reallist: List[OPair]): Option[String] = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
     log.debug("makeDecision NodeBits:F=" + pbo.getFromBcuid + ",R=" + vb.getNodeBitsEnc + ",S=" + pbo.getState
       + ",V=" + pbo.getV + ",J=" + pbo.getRejectState);
@@ -33,22 +33,22 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
       var totalbits = encbits.+(pendingbits);
 
       val pendingInList = vb.getPendingNodesList.filter { pn =>
-        pn.getBcuid.equals(NodeInstance.root().bcuid) ||
-          Networks.instance.onlineMap.contains(pn.getBcuid) ||
-          Networks.instance.directNodeByBcuid.contains(pn.getBcuid)
+        pn.getBcuid.equals(network.root().bcuid) ||
+          network.onlineMap.contains(pn.getBcuid) ||
+          network.directNodeByBcuid.contains(pn.getBcuid)
       }
-      totalbits = totalbits.clearBit(NodeInstance.root().try_node_idx)
-      Networks.instance.directNodes.map { pn =>
+      totalbits = totalbits.clearBit(network.root().try_node_idx)
+      network.directNodes.map { pn =>
         totalbits = totalbits.clearBit(pn.node_idx)
       }
-      Networks.instance.pendingNodes.map { pn =>
+      network.pendingNodes.map { pn =>
         //      if(!Networks.instance.onlineMap.contains(pn.bcuid)){
         //        log.warn("pending node not online:"+pn.bcuid);
         //      }
         totalbits = totalbits.clearBit(pn.try_node_idx)
       }
       log.debug("totalbits::" + oldtotalbits.toString(16) + "-->" + totalbits.toString(16)
-        + ":pbpendinCount=" + vb.getPendingNodesCount+":"+vb.getNodeBitsEnc
+        + ":pbpendinCount=" + vb.getPendingNodesCount + ":" + vb.getNodeBitsEnc
         + ":pendingInList::" + pendingInList.foldLeft(",")((A, p) => A + p.getBcuid + ","))
 
       //1. check encbits. for direct nodes 
@@ -61,7 +61,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
       }
     }
   }
-  def finalConverge(pbo: PVBase): Unit = {
+  def finalConverge(network: Network,pbo: PVBase): Unit = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
     log.debug("FinalConverge! for DMVotingNodeBits:F=" + pbo.getFromBcuid + ",Result=" + vb.getNodeBitsEnc);
 
@@ -70,12 +70,12 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
     }.toList
 
     val encbits = BitMap.mapToBigInt(vb.getNodeBitsEnc);
-    val hasBitExistsInMypending = Networks.instance.pendingNodes.map { n =>
+    val hasBitExistsInMypending = network.pendingNodes.map { n =>
       if (encbits.testBit(n.try_node_idx)) {
-        Networks.instance.addDNode(n);
+        network.addDNode(n);
       }
     }
-    Networks.instance.pending2DirectNode(nodes) match {
+    network.pending2DirectNode(nodes) match {
       case true =>
         log.info("success add pending to direct nodes::" + nodes.size)
       case false =>

@@ -2,7 +2,6 @@ package org.fc.brewchain.p22p.tasks
 
 import java.util.concurrent.TimeUnit
 import onight.oapi.scala.traits.OLog
-import org.fc.brewchain.p22p.node.NodeInstance
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
 import org.fc.brewchain.p22p.pbgens.P22P.PBVoteNodeIdx
 import java.math.BigInteger
@@ -27,9 +26,10 @@ import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.p22p.node.Networks
 import scala.collection.JavaConversions._
 import java.util.concurrent.ConcurrentHashMap
-
+import org.fc.brewchain.p22p.node.Network
+ 
 //投票决定当前的节点
-object JoinNetwork extends SRunner {
+case class JoinNetwork(network:Network,statupNodes:String) extends SRunner {
   def getName() = "JoinNetwork"
   val sameNodes = new HashMap[Integer, PNode]();
   val pendingJoinNodes = new ConcurrentHashMap[String, PNode]();
@@ -37,22 +37,23 @@ object JoinNetwork extends SRunner {
   val duplictedInfoNodes = Map[Int, PNode]();
   def runOnce() = {
     Thread.currentThread().setName("JoinNetwork");
-    if (NodeInstance.inNetwork()) {
+    implicit val _net = network
+    if (network.inNetwork()) {
       log.debug("CurrentNode In Network");
     } else {
       try {
-        val namedNodes = (Daos.props.get("org.bc.networks", "tcp://localhost:5100").split(",").map { x =>
+        val namedNodes = (statupNodes.split(",").map { x =>
           log.debug("x=" + x)
           PNode.fromURL(x);
         } ++ pendingJoinNodes.values()).filter { x =>
           !sameNodes.containsKey(x.uri.hashCode()) && !joinedNodes.containsKey(x.uri.hashCode()) && //
-            !NodeInstance.isLocalNode(x)
+            !network.isLocalNode(x)
         };
         namedNodes.map { n => //for each know Nodes
           //          val n = namedNodes(0);
-          log.debug("JoinNetwork :Run----Try to Join :MainNet=" + n.uri + ",cur=" + NodeInstance.root.uri);
-          if (!NodeInstance.root.equals(n)) {
-            val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode());
+          log.debug("JoinNetwork :Run----Try to Join :MainNet=" + n.uri + ",cur=" + network.root.uri);
+          if (!network.root.equals(n)) {
+            val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()));
             log.debug("JoinNetwork :Start to Connect---:" + n.uri);
             MessageSender.sendMessage("JINPZP", joinbody.build(), n, new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
@@ -65,15 +66,15 @@ object JoinNetwork extends SRunner {
                   MessageSender.dropNode(n)
                   val newN = fromPMNode(retjoin.getMyInfo)
                   MessageSender.changeNodeName(n.bcuid, newN.bcuid);
-                  Networks.instance.addPendingNode(newN);
+                  network.addPendingNode(newN);
                 } else if (retjoin.getRetCode() == 0) {
                   joinedNodes.put(n.uri.hashCode(), n);
                   val newN = fromPMNode(retjoin.getMyInfo)
                   MessageSender.changeNodeName(n.bcuid, newN.bcuid);
-                  Networks.instance.addPendingNode(newN);
+                  network.addPendingNode(newN);
                   retjoin.getNodesList.map { node =>
                     val pnode = fromPMNode(node);
-                    if(Networks.instance.addPendingNode(pnode))
+                    if(network.addPendingNode(pnode))
                     {
                       pendingJoinNodes.put(node.getBcuid, pnode);
                     }
@@ -92,20 +93,20 @@ object JoinNetwork extends SRunner {
         }
         if (namedNodes.size == 0) {
           log.debug("cannot reach more nodes. try from begining");
-          if (duplictedInfoNodes.size > 0 && !Networks.instance.directNodeByBcuid.contains(NodeInstance.root().bcuid)) {
+          if (duplictedInfoNodes.size > 0 && !network.directNodeByBcuid.contains(network.root().bcuid)) {
             //            val nl = duplictedInfoNodes.values.toSeq.PBFTVote { x => Some(x.node_idx) }
             //            nl.decision match {
             //              case Some(v: BigInteger) =>
             log.debug("duplictedInfoNodes ,change My Index:");
-            Networks.instance.removePendingNode(NodeInstance.root())
-            NodeInstance.changeNodeIdx(duplictedInfoNodes.head._2.node_idx);
+            network.removePendingNode(network.root())
+            network.changeNodeIdx(duplictedInfoNodes.head._2.node_idx);
             //              case _ => {
             //                log.debug("cannot get Converage :" + nl);
-            //NodeInstance.changeNodeIdx();
+            //network.changeNodeIdx();
             //              }
             //            }
             //} else {
-            //NodeInstance.changeNodeIdx();
+            //network.changeNodeIdx();
           }
           //          joinedNodes.clear();
           duplictedInfoNodes.clear();
@@ -119,5 +120,4 @@ object JoinNetwork extends SRunner {
       }
     }
   }
-  //Scheduler.scheduleWithFixedDelay(new Runnable, initialDelay, delay, unit)
 }

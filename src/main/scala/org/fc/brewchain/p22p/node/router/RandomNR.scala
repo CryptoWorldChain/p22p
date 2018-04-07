@@ -4,19 +4,19 @@ import scala.collection.mutable.Set
 import scala.collection.Map
 import onight.tfw.otransio.api.beans.FramePacket
 import org.fc.brewchain.p22p.node.PNode
-import org.fc.brewchain.p22p.node.NodeInstance
 import scala.math.BigInt
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.Networks
 import onight.oapi.scala.traits.OLog
 import com.google.protobuf.Message
+import com.google.protobuf.ByteString
 
 object RandomNR extends MessageRouter with OLog {
   def getRand() = Math.random(); //DHTConsRand.getRandFactor()
 
-  override def routeMessage(gcmd:String,body: Message)(implicit from: PNode = NodeInstance.root, //
+  override def routeMessage(gcmd:String,body: Either[Message,ByteString])(implicit from: PNode, //
     nextHops: IntNode = FullNodeSet(),
-    network: Network = Networks.instance) {
+    network: Network,messageid:String) {
     //    log.debug("routeMessage:from=" + from.node_idx + ",next=" + nextHops)
     nextHops match {
       case fs: FlatSet =>
@@ -52,8 +52,8 @@ object RandomNR extends MessageRouter with OLog {
         }
         startNodeSets.map { sn =>
           val (setid, node) = sn
-          broadcastMessage(gcmd,body)(node,
-            FlatSet(node.node_idx, mapSets.getOrElse(setid, BigInt(0))), network)
+          broadcastMessage(gcmd,body,node)(node,
+            FlatSet(node.node_idx, mapSets.getOrElse(setid, BigInt(0))), network,messageid)
         }
       //
       case n @ _ =>

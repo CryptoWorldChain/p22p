@@ -9,7 +9,6 @@ import org.fc.brewchain.p22p.pbgens.P22P.PBFTStage
 import scala.concurrent.impl.Future
 import com.google.protobuf.ByteString
 import onight.tfw.otransio.api.PacketHelper
-import org.fc.brewchain.p22p.node.NodeInstance
 import org.fc.brewchain.p22p.pbgens.P22P.PVType
 import org.fc.brewchain.p22p.pbgens.P22P.PVBaseOrBuilder
 import org.fc.brewchain.bcapi.JodaTimeHelper
@@ -27,10 +26,11 @@ import org.fc.brewchain.p22p.core.Votes.Undecisible
 import onight.tfw.mservice.NodeHelper
 import org.fc.brewchain.p22p.utils.Config
 import org.apache.commons.codec.binary.Base64
+import org.fc.brewchain.p22p.node.Network
 
-object StateStorage extends OLog {
+case class StateStorage(network: Network) extends OLog {
   def STR_seq(pbo: PVBaseOrBuilder): String = STR_seq(pbo.getMTypeValue)
-  def STR_seq(uid: Int): String = "v_seq_" + uid
+  def STR_seq(uid: Int): String = "v_seq_" + network.netid + "." + uid
 
   def nextV(pbo: PVBase.Builder): Int = {
     this.synchronized {
@@ -74,8 +74,8 @@ object StateStorage extends OLog {
             .setExtdata(ByteString.copyFrom(pbo.setV(retv)
               .setCreateTime(System.currentTimeMillis())
               .setLastUpdateTime(System.currentTimeMillis())
-              .setFromBcuid(NodeInstance.root().bcuid)
-              .setOriginBcuid(NodeInstance.root().bcuid)
+              .setFromBcuid(network.root().bcuid)
+              .setOriginBcuid(network.root().bcuid)
               .setState(newstate)
               .build().toByteArray()))
             .build());
@@ -86,7 +86,7 @@ object StateStorage extends OLog {
 
   def mergeViewState(pbo: PVBase): Option[OValue.Builder] = {
     Daos.viewstateDB.get(STR_seq(pbo)).get match {
-      case ov if ov != null && StringUtils.equals(pbo.getOriginBcuid, NodeInstance.root().bcuid) =>
+      case ov if ov != null && StringUtils.equals(pbo.getOriginBcuid, network.root().bcuid) =>
         Some(ov.toBuilder()) // from locals
       case ov if ov != null =>
         PVBase.newBuilder().mergeFrom(ov.getExtdata) match {
@@ -118,7 +118,7 @@ object StateStorage extends OLog {
                     Daos.viewstateDB.put(STR_seq(pbo),
                       OValue.newBuilder().setCount(pbo.getN) //
                         .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                          .setFromBcuid(NodeInstance.root().bcuid)
+                          .setFromBcuid(network.root().bcuid)
                           .setState(PBFTStage.INIT)
                           .setV(pbo.getV).setStoreNum(pbo.getStoreNum).setViewCounter(pbo.getViewCounter)
                           .build().toByteArray()))
@@ -175,9 +175,9 @@ object StateStorage extends OLog {
   //  }
   def updateTopViewState(pbo: PVBase) {
     this.synchronized({
-      val ov = Daos.viewstateDB.get(StateStorage.STR_seq(pbo)).get
+      val ov = Daos.viewstateDB.get(STR_seq(pbo)).get
       if (ov != null) {
-        Daos.viewstateDB.put(StateStorage.STR_seq(pbo),
+        Daos.viewstateDB.put(STR_seq(pbo),
           ov.toBuilder().clone().clearSecondKey()
             .setExtdata(pbo.toBuilder().setLastUpdateTime(System.currentTimeMillis()).build().toByteString()).build());
       }
@@ -237,12 +237,12 @@ object StateStorage extends OLog {
                 .build().toByteArray()))
             Daos.viewstateDB.put(dbkey + pbo.getState, ov.build());
 
-            if (StringUtils.equals(pbo.getOriginBcuid, NodeInstance.root().bcuid)) {
+            if (StringUtils.equals(pbo.getOriginBcuid, network.root().bcuid)) {
               log.debug("Reject for My Vote ")
               Daos.viewstateDB.put(STR_seq(pbo),
                 OValue.newBuilder().setCount(pbo.getN) //
                   .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                    .setFromBcuid(NodeInstance.root().bcuid)
+                    .setFromBcuid(network.root().bcuid)
                     .setState(PBFTStage.INIT)
                     .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
                     .build().toByteArray()))
@@ -257,12 +257,12 @@ object StateStorage extends OLog {
                 .build().toByteArray()))
             Daos.viewstateDB.put(dbkey + pbo.getState, ov.build());
             log.warn("getRject ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
-            if (StringUtils.equals(pbo.getOriginBcuid, NodeInstance.root().bcuid)) {
+            if (StringUtils.equals(pbo.getOriginBcuid, network.root().bcuid)) {
               log.debug("Reject for this Vote ")
               Daos.viewstateDB.put(STR_seq(pbo),
                 OValue.newBuilder().setCount(pbo.getN) //
                   .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                    .setFromBcuid(NodeInstance.root().bcuid)
+                    .setFromBcuid(network.root().bcuid)
                     .setState(PBFTStage.INIT)
                     .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
                     .build().toByteArray()))
@@ -272,7 +272,7 @@ object StateStorage extends OLog {
               Daos.viewstateDB.put(STR_seq(pbo),
                 OValue.newBuilder().setCount(pbo.getN) //
                   .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                    .setFromBcuid(NodeInstance.root().bcuid)
+                    .setFromBcuid(network.root().bcuid)
                     .setState(PBFTStage.REJECT).setRejectState(PBFTStage.REJECT)
                     .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
                     .build().toByteArray()))
@@ -316,7 +316,7 @@ object StateStorage extends OLog {
       log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
       //      outputList(ovs.get.toList)
       if (dm != null) { //Vote only pass half
-        dm.voteList(pbo, reallist)
+        dm.voteList(network, pbo, reallist)
       } else {
         Undecisible()
       }

@@ -47,6 +47,7 @@ message PSJoin{//加入
 		NODE_CONNECT = 1;//节点请求连接
 	}
 	Operation op = 2;//操作类型
+	string nid = 50;//网络ID	
 }
 
 message PRetJoin{//加入的返回信息
@@ -63,6 +64,7 @@ message PRetJoin{//加入的返回信息
 message PSNodeInfo{//加入
 	string req_token = 1;//是否获取拓扑信息
 	PMNodeInfo node = 2;
+	string nid = 50;//网络ID	
 }
 
 message PRetNodeInfo{//加入的返回信息
@@ -82,6 +84,7 @@ message PRetNodeInfo{//加入的返回信息
 message PBSwitchNodes{	//交换我所知道的节点信息
 	repeated PMNodeInfo  nodes = 1;//所有节点的信息
 	PMNodeInfo my_info = 2;
+	string nid = 50;//网络ID	
 	string sign = 100;//对上述数据的签名结果
 }
 
@@ -120,8 +123,10 @@ message PVBase{
 	uint32 view_counter = 12;//计数器,为快照准备
 	string origin_bcuid = 20;//从哪个节点名称来的
 	string message_uid = 30;//消息的uuid
-	
+
 	string from_bcuid = 31;//从哪个节点名称来的
+	
+	string nid = 50;//网络ID
 	string sign = 100; //对上述数据的签名结果
 }
 
@@ -130,9 +135,8 @@ message PBVoteNodeIdx{//投票决定节点的idx,80%通过才行
 	
 	string node_bits_enc = 2;//所有节点的编码信息
 	string pending_bits_enc = 3;//
-	
 	repeated PMNodeInfo d_nodes = 4;//所有直连信息
-
+	string nid = 50;//网络ID
 }
 
 
@@ -140,12 +144,14 @@ message PBVoteViewChange{//投票决定节点的idx,80%通过才行
 	uint32 v = 1;//当前的v
 	uint32 view_counter = 2;//counter必须匹配才行
 	uint32 store_num = 3;// 为了支持快照定义的版本
+	string nid = 50;//网络ID
 }
 
 
 message PSVoteState{
 	PVType t = 1;//消息类型
-	int32 v = 2;//状态计数器 
+	int32 v = 2;//状态计数器
+	string nid = 50;//网络ID	 
 }
 
 message NodeStateInfo{
@@ -159,10 +165,10 @@ message PRetVoteState{
 
 	PVType 	m_type = 3;//消息类型
 	NodeStateInfo	cur = 4;//当前信息
-	repeated NodeStateInfo	nodes = 5;//所有节点的信息 
+	repeated NodeStateInfo	nodes = 5;//所有节点的信息
+	
+	string nid = 50;//网络ID	 
 }
-
-
 
 
 enum TestMessageType{
@@ -182,6 +188,7 @@ message PSTestMessage{
 	bool dwall = 8;
 	bool block = 10;
 	int64 ps = 9 ;
+	string nid = 50;//网络ID
 }
 
 message PRetTestMessage{
@@ -192,6 +199,7 @@ message PRetTestMessage{
 	int32 pending_count = 4;
 	
 	string bitencs = 5;
+	string nid = 50;//网络ID
 }
  
 
@@ -235,6 +243,7 @@ message PSRouteMessage {
 	string messageid = 6;
 	PBRouteMsgType msgtype = 7;
 	string encbits = 8;
+	string nid = 50;//网络ID
 }
 
 message PRetRouteMessage {

@@ -22,7 +22,6 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSJoin
 import org.fc.brewchain.p22p.pbgens.P22P.PRetJoin
 import org.fc.brewchain.p22p.PSMPZP
 import org.fc.brewchain.p22p.pbgens.P22P.PCommand
-import org.fc.brewchain.p22p.node.NodeInstance
 import java.net.URL
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
@@ -54,47 +53,28 @@ object PZPVoteBase extends PSMPZP[PVBase] {
 
 //
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
-object PZPVoteBaseService extends OLog with PBUtils with LService[PVBase] with PMNodeHelper with LogHelper {
+object PZPVoteBaseService extends LogHelper with PBUtils with LService[PVBase] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PVBase, handler: CompleteHandler) = {
-    MDCSetMessageID(pbo.getMTypeValue+"|"+pbo.getMessageUid)
-    if (NodeInstance.root() != null) {
-      MDCSetBCUID()
-    }
+    MDCSetMessageID(pbo.getMTypeValue + "|" + pbo.getMessageUid)
 
-    log.debug("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN="+pbo.getStoreNum+",VC="+pbo.getViewCounter+ ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
+    log.debug("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
       + ",Rejct=" + pbo.getRejectState)
 
     var ret = PRetJoin.newBuilder();
     try {
-      pbo.getMType match {
-        case PVType.NETWORK_IDX | PVType.VIEW_CHANGE =>
-          VoteQueue.appendInQ(pbo)
-
-//        case PVType.VIEW_CHANGE =>
-//          VoteQueue.appendInQ(pbo)
-        //          
-        //          val nextstate = StateStorage.vote(pbo);
-        //          if (pbo.getRejectState != PBFTStage.REJECT) {
-        //            val reply = pbo.toBuilder().setState(nextstate).setFromBcuid(NodeInstance.root().bcuid)
-        //              .setOldState(pbo.getState);
-        //            nextstate match {
-        //              case PBFTStage.REJECT =>
-        //                reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
-        //                MessageSender.replyPostMessage(pack.getGlobalCMD,pbo.getFromBcuid, reply.build());
-        //              case PBFTStage.NOOP =>
-        //              case PBFTStage.REPLY =>
-        //                log.info("MergeSuccess!!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
-        //              //do nothing.
-        //              case _ =>
-        //                Networks.instance.pendingNodes.map { node =>
-        //                  MessageSender.postMessage(pack.getModuleAndCMD, reply.build(), node.bcuid)
-        //                }
-        //            }
-        //          } else {
-        //            log.debug("Reject status will not wall message again");
-        //          }
-        case _ =>
-          log.debug("unknow vote message:type=" + pbo.getMType)
+      val network = networkByID(pbo.getNid)
+      if (network == null) {
+        ret.setRetCode(-1).setRetMessage("unknow network:" + pbo.getNid)
+        handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+      } else {
+        MDCSetBCUID(network)
+        
+        pbo.getMType match {
+          case PVType.NETWORK_IDX | PVType.VIEW_CHANGE =>
+            network.voteQueue.appendInQ(pbo)
+          case _ =>
+            log.debug("unknow vote message:type=" + pbo.getMType)
+        }
       }
 
       //      }

@@ -16,7 +16,6 @@ import org.fc.brewchain.p22p.node.router.RandomNR
 import onight.tfw.otransio.api.PacketHelper
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.router.CircleNR
-import org.fc.brewchain.p22p.node.NodeInstance
 import com.google.protobuf.StringValue
 
 object TestMemGraphy extends OLog {
@@ -29,17 +28,18 @@ object TestMemGraphy extends OLog {
     var bitenc = BigInt(0)
     for (i <- 0 to nodeCount - 1) {
 
-      val node = new PNode(name = "a" + i, node_idx = i*2, "",
-        try_node_idx = i*2);
+      val node = new PNode(_name = "a" + i, _node_idx = i*2, "",
+        _try_node_idx = i*2);
       //      println("idx=" + node.node_idx);
       nodes.+=(node);
       bitenc = bitenc.setBit(i*2);
-      networks.append(new Network())
+      networks.append(new Network("test:"+i,""))
     }
     println("bitenc=" + bitenc.toString(2) + "==>" + BitMap.hexToMapping(bitenc)
         +",size=="+nodes.size)
-    NodeInstance.resetRoot(nodes(0))
+    
     networks.map { net =>
+      net.resetRoot(nodes(0))
       nodes.map { node =>
         if(net.addDNode(node)==None){
           println("append error:"+node)
@@ -68,7 +68,7 @@ object TestMemGraphy extends OLog {
       val n = net.nodeByIdx(0).get;
       //CircleNR.resetMap(net.root.node_idx, nodeCount);
       //                  RandomNR.broadcastMessage(PacketHelper.genSyncPack("TEST", "ABC", "hello"))(net.nodeByIdx((Math.random() * nodeCount % nodeCount).asInstanceOf[Int]).get, network = net)
-      circleNR.broadcastMessage("TTTPZP",StringValue.newBuilder().setValue("abc").build())( network = net)
+      circleNR.broadcastMessage("TTTPZP",Left(StringValue.newBuilder().setValue("abc").build()),net.root())( toN=net.root(),network = net,messageid="abc")
       //       if (net.connectedMap.size != nodes.size + 1) {
 //      println("netmapsize. =:" + net.connectedMap)
       //          }

@@ -28,10 +28,10 @@ object TestNodeConverge extends OLog {
     val nodesMap = new HashMap[String, PNode]();
     var bitenc = BigInt(0)
     for (i <- 0 to nodeCount - 1) {
-      val node = new PNode(name = "a" + i, node_idx = i, "");
+      val node = new PNode(_name = "a" + i, _node_idx = i, "");
       nodes.+=(node);
       bitenc = bitenc.setBit(i);
-      networks.append(new Network())
+      networks.append(new Network("test:"+i,""))
     }
     networks.map { net =>
       nodes.map { node =>
@@ -90,7 +90,7 @@ object TestNodeConverge extends OLog {
         val net = networks((Math.random() * nodeCount % nodeCount).asInstanceOf[Int]);
         val n = net.nodeByIdx((Math.random() * nodeCount % nodeCount).asInstanceOf[Int]).get;
         //      RandomNR.broadcastMessage(PacketHelper.genSyncPack("TEST", "ABC", "hello"),rootn)(n, network = net)
-        circleNr.broadcastMessage("TTTPZP",StringValue.newBuilder().setValue("abc").build(), rootn)(n, network = net)
+        circleNr.broadcastMessage("TTTPZP",Left(StringValue.newBuilder().setValue("abc").build()), rootn)(n, network = net,messageid="abc")
         //        node.forwardMessage("aaa", msg, node.directNode.keys, node);
       }
     }, 1, 100, TimeUnit.MICROSECONDS)

@@ -7,15 +7,19 @@ import org.brewchain.bcapi.gens.Oentity.OValue
 import org.fc.brewchain.p22p.pbgens.P22P.PBFTStage
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
+import org.fc.brewchain.p22p.node.Network
+import org.fc.brewchain.p22p.node.Networks
+import java.util.concurrent.ConcurrentHashMap
 
-object VoteQueue extends LogHelper {
+case class VoteQueue(network: Network) extends LogHelper {
 
-  val inQ = new LinkedBlockingQueue[(PVBase, OValue.Builder, PBFTStage)]();
+  val inQ = new LinkedBlockingQueue[(PVBase, OValue.Builder, PBFTStage)](); //,new LinkedBlockingQueue[(Network,PVBase, OValue.Builder, PBFTStage)]]();
   val outQ = new ConcurrentLinkedQueue[PVBase]();
 
   def appendInQ(pbo: PVBase) = {
+    val network = Networks.networkByID(pbo.getNid);
 
-    StateStorage.mergeViewState(pbo) match {
+    network.stateStorage.mergeViewState(pbo) match {
       case Some(ov) if ov == null =>
         log.debug("drop message because ov is null:V=" + pbo.getV + ",S=" + pbo.getState + ",F=" + pbo.getFromBcuid + ",O=" + pbo.getOriginBcuid
           + ",RJ=" + pbo.getRejectState)
@@ -26,7 +30,7 @@ object VoteQueue extends LogHelper {
             inQ.offer((pbo, ov, PBFTStage.PRE_PREPARE));
 
           case PBFTStage.PRE_PREPARE =>
-            if (StateStorage.updateNodeStage(pbo, PBFTStage.PRE_PREPARE) != PBFTStage.DUPLICATE) {
+            if (network.stateStorage.updateNodeStage(pbo, PBFTStage.PRE_PREPARE) != PBFTStage.DUPLICATE) {
               if (pbo.getRejectState != PBFTStage.REJECT) {
                 inQ.offer((pbo, ov, PBFTStage.PREPARE));
                 log.debug("Qsize=" + inQ.size())
@@ -36,7 +40,7 @@ object VoteQueue extends LogHelper {
             }
 
           case PBFTStage.PREPARE =>
-            if (StateStorage.updateNodeStage(pbo, pbo.getState) != PBFTStage.DUPLICATE) {
+            if (network.stateStorage.updateNodeStage(pbo, pbo.getState) != PBFTStage.DUPLICATE) {
               if (pbo.getRejectState != PBFTStage.REJECT) {
                 inQ.offer((pbo, ov, PBFTStage.COMMIT));
               } else {
@@ -44,12 +48,12 @@ object VoteQueue extends LogHelper {
               }
             }
           case PBFTStage.COMMIT =>
-            StateStorage.updateNodeStage(pbo, pbo.getState)
+            network.stateStorage.updateNodeStage(pbo, pbo.getState)
             //            if (pbo.getRejectState != PBFTStage.REJECT) {
             inQ.offer((pbo, ov, PBFTStage.REPLY));
           //            }
           case PBFTStage.REPLY =>
-            StateStorage.saveStageV(pbo, ov.build());
+            network.stateStorage.saveStageV(pbo, ov.build());
             log.info("MergeSuccess.Remote!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
             PBFTStage.NOOP
           case _ =>
@@ -57,8 +61,7 @@ object VoteQueue extends LogHelper {
         }
 
       case None =>
-        if(pbo.getRejectState != PBFTStage.REJECT)
-        {
+        if (pbo.getRejectState != PBFTStage.REJECT) {
           inQ.offer((pbo, null, PBFTStage.REJECT));
         }
         PBFTStage.REJECT
@@ -68,13 +71,6 @@ object VoteQueue extends LogHelper {
 
   def pollQ(): (PVBase, OValue.Builder, PBFTStage) = {
     inQ.poll(20, TimeUnit.SECONDS)
-  }
-
-  def main(args: Array[String]): Unit = {
-    inQ.offer((PVBase.newBuilder().build(), null, PBFTStage.COMMIT))
-    outQ.offer(PVBase.newBuilder().build())
-    println(inQ.size())
-    println(outQ.size())
   }
 
   def appendOutQ(pbo: PVBase) = {

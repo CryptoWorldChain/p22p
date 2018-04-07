@@ -19,20 +19,20 @@ import org.fc.brewchain.bcapi.crypto.BitMap
 import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.p22p.core.Votes.NotConverge
 import org.fc.brewchain.p22p.core.Votes.Converge
-import org.fc.brewchain.p22p.node.NodeInstance
+import org.fc.brewchain.p22p.node.Network
 
 trait Votable extends OLog {
-  def makeDecision(pbo: PVBase, reallist: List[OPair] = null): Option[Any]
-  def finalConverge(pbo: PVBase): Unit
-  def voteList(pbo: PVBase, reallist: List[OPair]): VoteResult = { // find max store num.
+  def makeDecision(network: Network, pbo: PVBase, reallist: List[OPair] = null): Option[Any]
+  def finalConverge(network: Network, pbo: PVBase): Unit
+  def voteList(network: Network,pbo: PVBase, reallist: List[OPair]): VoteResult = { // find max store num.
 
     val pboresult = pbo.getState match {
-      case PBFTStage.PRE_PREPARE if NodeInstance.isLocalNode(pbo.getFromBcuid) =>
+      case PBFTStage.PRE_PREPARE if network.isLocalNode(pbo.getFromBcuid) =>
         return Converge(pbo.getState); //bad coding....for return
       case PBFTStage.PRE_PREPARE =>
-        makeDecision(pbo, reallist);
+        makeDecision(network, pbo, reallist);
       case PBFTStage.PREPARE =>
-        makeDecision(pbo, reallist);
+        makeDecision(network, pbo, reallist);
       case _ =>
         0
     }
@@ -47,9 +47,9 @@ trait Votable extends OLog {
       }
     } else {
       if (reallist.size < pbo.getN / 2 && pbo.getN > 4) {
-            log.debug("not reach vote number ,so Undecisible")
-            return Undecisible();
-          }
+        log.debug("not reach vote number ,so Undecisible")
+        return Undecisible();
+      }
       Votes.vote(reallist).PBFTVote({
         x =>
           val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata).build();
@@ -57,7 +57,7 @@ trait Votable extends OLog {
             if (pbo.getFromBcuid.equals(p.getFromBcuid)) {
               pboresult
             } else {
-              makeDecision(p, reallist);
+              makeDecision(network: Network,p, reallist);
             }
           } else {
             0;
@@ -82,7 +82,7 @@ trait Votable extends OLog {
 }
 
 object DMViewChange extends Votable with OLog {
-  def makeDecision(pbo: PVBase, reallist: List[OPair]): Option[String] = {
+  def makeDecision(network: Network,pbo: PVBase, reallist: List[OPair]): Option[String] = {
     val vb = PBVoteViewChange.newBuilder().mergeFrom(pbo.getContents);
     val choise = vb.getStoreNum + "." + pbo.getV
     log.debug("makeDecision for DMViewChange:F=" + pbo.getFromBcuid + ",R=" + choise);
@@ -96,7 +96,7 @@ object DMViewChange extends Votable with OLog {
     //    pbo
     Some(maxv + "." + choise)
   }
-  override def voteList(pbo: PVBase, reallist: List[OPair]): VoteResult = { // find max store num.
+  override def voteList(network: Network,pbo: PVBase, reallist: List[OPair]): VoteResult = { // find max store num.
     if (pbo.getState == PBFTStage.PRE_PREPARE) {
       return Converge(pbo.getState);
     }
@@ -119,8 +119,8 @@ object DMViewChange extends Votable with OLog {
         }
     }, pbo.getN)
   }
-  def finalConverge(pbo: PVBase): Unit = {
-    val ovs = Daos.viewstateDB.listBySecondKey(StateStorage.STR_seq(pbo) + "." + pbo.getOriginBcuid + "." + pbo.getMessageUid + "." + pbo.getV);
+  def finalConverge(network: Network,pbo: PVBase): Unit = {
+    val ovs = Daos.viewstateDB.listBySecondKey(network.stateStorage.STR_seq(pbo) + "." + pbo.getOriginBcuid + "." + pbo.getMessageUid + "." + pbo.getV);
     if (ovs.get != null && ovs.get.size() > 0) {
       val reallist = ovs.get.filter { ov => ov.getValue.getDecimals == pbo.getStateValue }.toList;
       log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
@@ -132,7 +132,7 @@ object DMViewChange extends Votable with OLog {
       });
       val vb = PBVoteViewChange.newBuilder().mergeFrom(pbo.getContents).setStoreNum(maxv);
 
-      StateStorage.updateTopViewState(pbo.toBuilder()
+      network.stateStorage.updateTopViewState(pbo.toBuilder()
         .setViewCounter(0)
         .setMType(PVType.NETWORK_IDX).setState(PBFTStage.REPLY)
         .setStoreNum(maxv).setContents(vb.build().toByteString()).build());

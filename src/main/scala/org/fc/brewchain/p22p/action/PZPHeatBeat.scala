@@ -22,7 +22,6 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSJoin
 import org.fc.brewchain.p22p.pbgens.P22P.PRetJoin
 import org.fc.brewchain.p22p.PSMPZP
 import org.fc.brewchain.p22p.pbgens.P22P.PCommand
-import org.fc.brewchain.p22p.node.NodeInstance
 import java.net.URL
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
@@ -49,11 +48,12 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
     var ret = PRetNodeInfo.newBuilder();
     try {
       //       pbo.getMyInfo.getNodeName
-      ret.setCurrent(toPMNode(NodeInstance.root))
-      val pending = Networks.instance.pendingNodes;
-      val directNodes = Networks.instance.directNodes;
-      Networks.instance.onlineMap.put(pbo.getNode.getBcuid, fromPMNode(pbo.getNode))
-      log.debug("pending=" + Networks.instance.pendingNodes.size + "::" + Networks.instance.pendingNodes)
+      val network = networkByID(pbo.getNid)
+      ret.setCurrent(toPMNode(network.root))
+      val pending = network.pendingNodes;
+      val directNodes = network.directNodes;
+      network.onlineMap.put(pbo.getNode.getBcuid, fromPMNode(pbo.getNode))
+      log.debug("pending=" + network.pendingNodes.size + "::" + network.pendingNodes)
       //      ret.addNodes(toPMNode(NodeInstance.curnode));
       pending.map { _pn =>
         log.debug("pending==" + _pn)
@@ -63,7 +63,7 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
         log.debug("directnodes==" + _pn)
         ret.addDnodes(toPMNode(_pn));
       }
-      ret.setBitEncs(Networks.instance.node_strBits);
+      ret.setBitEncs(network.node_strBits);
 
     } catch {
       case fe: NodeInfoDuplicated => {

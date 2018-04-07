@@ -14,11 +14,24 @@ import onight.tfw.otransio.api.beans.FramePacket
 import org.fc.brewchain.p22p.node.router.CircleNR
 import org.fc.brewchain.p22p.utils.LogHelper
 import org.fc.brewchain.bcapi.crypto.BitMap
+import org.fc.brewchain.p22p.tasks.JoinNetwork
+import org.fc.brewchain.p22p.tasks.CheckingHealthy
+import org.fc.brewchain.p22p.tasks.VoteNodeMap
+import org.fc.brewchain.p22p.pbft.VoteWorker
+import java.util.concurrent.TimeUnit
+import org.fc.brewchain.p22p.utils.Config
+import org.fc.brewchain.p22p.tasks.Scheduler
+import org.fc.brewchain.p22p.pbft.StateStorage
+import java.util.HashMap
+import org.fc.brewchain.p22p.pbft.VoteQueue
+
+import scala.collection.JavaConversions._
+import com.google.protobuf.ByteString
 
 case class BitEnc(bits: BigInt) {
   val strEnc: String = BitMap.hexToMapping(bits);
 }
-class Network() extends OLog //
+case class Network(netid: String, nodelist: String) extends OLog with LocalNode //
 {
   val directNodeByBcuid: Map[String, PNode] = Map.empty[String, PNode];
   val directNodeByIdx: Map[Int, PNode] = Map.empty[Int, PNode];
@@ -41,8 +54,9 @@ class Network() extends OLog //
 
   var circleNR: CircleNR = CircleNR(node_bits())
 
-  val noneNode = PNode(name = "NONE", node_idx = 0, "",
-    try_node_idx = 0)
+  val noneNode = PNode(_name = "NONE", _node_idx = 0, "",
+    _try_node_idx = 0)
+
   def nodeByBcuid(name: String): PNode = directNodeByBcuid.getOrElse(name, noneNode);
   def nodeByIdx(idx: Int) = directNodeByIdx.get(idx);
 
@@ -55,8 +69,8 @@ class Network() extends OLog //
     val node = pnode.changeIdx(pnode.try_node_idx)
     this.synchronized {
       if (!directNodeByBcuid.contains(node.bcuid) && node.node_idx >= 0 && !node_bits().testBit(node.node_idx)) {
-        if (StringUtils.equals(node.bcuid, NodeInstance.root().bcuid)) {
-          NodeInstance.resetRoot(node)
+        if (StringUtils.equals(node.bcuid, root().bcuid)) {
+          resetRoot(node)
         }
         directNodeByBcuid.put(node.bcuid, node)
         resetNodeBits(node_bits.setBit(node.node_idx));
@@ -134,71 +148,76 @@ class Network() extends OLog //
       }
   }
 
-  def wallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
+  def wallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
     if (circleNR.encbits.bitCount > 0) {
       log.debug("wall to direct:" + messageId + ",dnodescount=" + directNodes.size + ",enc=" +
         node_strBits())
-      circleNR.broadcastMessage(gcmd, body)(network = this)
+      circleNR.broadcastMessage(gcmd, body, from = root())(toN = root(), network = this, messageid = messageId)
     }
     pendingNodes.map(n =>
       {
         log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)
+        MessageSender.postMessage(gcmd, body, n)(this)
       })
   }
 
-  def bwallMessage(gcmd: String, body: Message, bits: BigInt, messageId: String = ""): Unit = {
+  def bwallMessage(gcmd: String, body: Either[Message, ByteString], bits: BigInt, messageId: String = ""): Unit = {
     directNodes.map(n =>
       if (bits.testBit(n.node_idx)) {
         log.debug("bitpost to direct:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)
+        MessageSender.postMessage(gcmd, body, n)(this)
       })
     pendingNodes.map(n =>
       if (bits.testBit(n.try_node_idx)) {
         log.debug("bitpost to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)
+        MessageSender.postMessage(gcmd, body, n)(this)
       })
   }
 
-  def dwallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
+  def dwallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
     directNodes.map(n =>
       {
         log.debug("post to direct:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)
+        MessageSender.postMessage(gcmd, body, n)(this)
       })
     pendingNodes.map(n =>
       {
         log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)
+        MessageSender.postMessage(gcmd, body, n)(this)
       })
+  }
+  def wallOutsideMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
+    directNodes.map { n =>
+      if (!isLocal(n)) {
+        log.debug("post to directNode:bcuid=" + n.bcuid + ",messageid=" + messageId);
+        MessageSender.postMessage(gcmd, body, n)(this)
+      }
+    }
+    pendingNodes.map(n =>
+      {
+        if (!isLocal(n)) {
+          log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
+          MessageSender.postMessage("VOTPZP", body, n)(this)
+        }
+      })
+  }
+  //
+  val joinNetwork = JoinNetwork(this, nodelist);
+  val stateStorage = StateStorage(this);
+  val voteQueue = VoteQueue(this);
+
+  def startup(): Unit = {
+    Scheduler.scheduleWithFixedDelay(joinNetwork, 5, 10, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(CheckingHealthy(this), 10, Config.TICK_CHECK_HEALTHY, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(VoteNodeMap(this, voteQueue), 10, Config.TICK_VOTE_MAP, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(VoteWorker(this, voteQueue), 10, Config.TICK_VOTE_WORKER, TimeUnit.SECONDS)
   }
 }
 object Networks extends LogHelper {
-  val instance: Network = new Network();
-  //  def forwardMessage(fp: FramePacket) {
-  ////    CircleNR.broadcastMessage(fp)(NodeInstance.root(), network = instance)
-  //  }
-  def wallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
-    instance.wallMessage(gcmd, body, messageId);
-  }
-
-  def dwallMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
-    instance.dwallMessage(gcmd, body, messageId);
-  }
-  def wallOutsideMessage(gcmd: String, body: Message, messageId: String = ""): Unit = {
-    instance.directNodes.map { n =>
-      if (!NodeInstance.isLocal(n)) {
-        log.debug("post to directNode:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n);
-      }
-    }
-    instance.pendingNodes.map(n =>
-      {
-        if (!NodeInstance.isLocal(n)) {
-          log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-          MessageSender.postMessage("VOTPZP", body, n)
-        }
-      })
+  //  val raft: Network = new Network("raft","tcp://127.0.0.1:5100");
+  val netsByID = new HashMap[String, Network]();
+  def networkByID(netid: String): Network = {
+    netsByID.get(netid);
   }
 }
 

@@ -22,7 +22,6 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSJoin
 import org.fc.brewchain.p22p.pbgens.P22P.PRetJoin
 import org.fc.brewchain.p22p.PSMPZP
 import org.fc.brewchain.p22p.pbgens.P22P.PCommand
-import org.fc.brewchain.p22p.node.NodeInstance
 import java.net.URL
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
@@ -71,105 +70,108 @@ object PZPTestMessageService extends OLog with PBUtils with LService[PSTestMessa
       } else {
         pbo.getMessageid
       }
-    MDCSetMessageID(pbo.getTypeValue + "|" + messageid);
-    if (NodeInstance.root() != null) {
-      MDCSetBCUID()
-    }
-    val cdl = if (cdlMap.containsKey(messageid)) cdlMap.get(messageid) else {
-      new CountDownLatch(0);
-    }
-    log.debug("TestMessage:Type=" + pbo.getType)
-
     var ret = PRetTestMessage.newBuilder();
-    try {
+    val network = networkByID(pbo.getNid)
+    if (network == null) {
+      ret.setRetCode(-1).setRetMessage("unknow network:" + pbo.getNid)
+      handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+    } else {
+      MDCSetBCUID(network)
+      MDCSetMessageID(pbo.getTypeValue + "|" + messageid);
+      val cdl = if (cdlMap.containsKey(messageid)) cdlMap.get(messageid) else {
+        new CountDownLatch(0);
+      }
+      log.debug("TestMessage:Type=" + pbo.getType)
 
-      pbo.getType match {
-        case TestMessageType.WALL =>
-          log.debug("Get Wall Message:COST:" + (System.currentTimeMillis() - pbo.getWallTime));
-          if (cdl.getCount > 0 && StringUtils.isNotBlank(pbo.getContent)) {
-            ret.setRetCode(-2).setRetMessage("waiting for last call:");
-          } else {
-
-            val cdlr = new CountDownLatch(Networks.instance.directNodes.size +
-              Networks.instance.pendingNodes.size)
-            cdlMap.put(messageid, cdlr);
-            val start = System.currentTimeMillis();
-
-            if (pbo.getDwall) {
-              Networks.dwallMessage("TTTPZP", pbo.toBuilder()
-                .setMessageid(messageid).setWallTime(System.currentTimeMillis())
-                .setFromBcuid(NodeInstance.root().bcuid)
-                .setType(TestMessageType.PING)
-                .setOrgBcuid(NodeInstance.root().bcuid)
-                .build(), messageid);
+      try {
+        implicit val network = networkByID(pbo.getNid)
+        pbo.getType match {
+          case TestMessageType.WALL =>
+            log.debug("Get Wall Message:COST:" + (System.currentTimeMillis() - pbo.getWallTime));
+            if (cdl.getCount > 0 && StringUtils.isNotBlank(pbo.getContent)) {
+              ret.setRetCode(-2).setRetMessage("waiting for last call:");
             } else {
-              Networks.wallMessage("TTTPZP", pbo.toBuilder()
-                .setMessageid(messageid).setWallTime(System.currentTimeMillis())
-                .setFromBcuid(NodeInstance.root().bcuid)
-                .setType(TestMessageType.PING)
-                .setOrgBcuid(NodeInstance.root().bcuid)
-                .build(), messageid);
-            }
-            if (pbo.getBlock) {
 
-              Thread.currentThread().synchronized {
-                try {
-                  cdlr.await()
-                } catch {
-                  case _: Throwable =>
+              val cdlr = new CountDownLatch(network.directNodes.size +
+                network.pendingNodes.size)
+              cdlMap.put(messageid, cdlr);
+              val start = System.currentTimeMillis();
+
+              if (pbo.getDwall) {
+                network.dwallMessage("TTTPZP", Left(pbo.toBuilder()
+                  .setMessageid(messageid).setWallTime(System.currentTimeMillis())
+                  .setFromBcuid(network.root().bcuid)
+                  .setType(TestMessageType.PING)
+                  .setOrgBcuid(network.root().bcuid)
+                  .build()), messageid);
+              } else {
+                network.wallMessage("TTTPZP", Left(pbo.toBuilder()
+                  .setMessageid(messageid).setWallTime(System.currentTimeMillis())
+                  .setFromBcuid(network.root().bcuid)
+                  .setType(TestMessageType.PING)
+                  .setOrgBcuid(network.root().bcuid)
+                  .build()), messageid);
+              }
+              if (pbo.getBlock) {
+
+                Thread.currentThread().synchronized {
+                  try {
+                    cdlr.await()
+                  } catch {
+                    case _: Throwable =>
+                  }
                 }
               }
+              cdlMap.remove(messageid)
+
+              ret.setDnodeCount(network.directNodes.size)
+              ret.setPendingCount(network.pendingNodes.size)
+              ret.setBitencs(network.node_strBits)
+              ret.setRetMessage("TotalCost:" + (System.currentTimeMillis() - start))
+              log.debug("get Ret:" + (System.currentTimeMillis() - start))
             }
-            cdlMap.remove(messageid)
-            
-            ret.setDnodeCount(Networks.instance.directNodes.size)
-            ret.setPendingCount(Networks.instance.pendingNodes.size)
-            ret.setBitencs(Networks.instance.node_strBits)
-            ret.setRetMessage("TotalCost:" + (System.currentTimeMillis() - start))
-            log.debug("get Ret:" + (System.currentTimeMillis() - start))
-          }
-        case TestMessageType.PING =>
-          log.debug("Get Ping Message:COST:" + (System.currentTimeMillis() - pbo.getWallTime));
-          Thread.sleep(pbo.getPs + 1)
-          MessageSender.postMessage("TTTPZP", pbo.toBuilder()
-            .setRecvTime(System.currentTimeMillis())
-            .setType(TestMessageType.PONG)
-            .setFromBcuid(NodeInstance.root().bcuid)
-            .build(),
-            Networks.instance.nodeByBcuid(pbo.getOrgBcuid));
+          case TestMessageType.PING =>
+            log.debug("Get Ping Message:COST:" + (System.currentTimeMillis() - pbo.getWallTime));
+            Thread.sleep(pbo.getPs + 1)
+            MessageSender.postMessage("TTTPZP", Left(pbo.toBuilder()
+              .setRecvTime(System.currentTimeMillis())
+              .setType(TestMessageType.PONG)
+              .setFromBcuid(network.root().bcuid)
+              .build()),
+              network.nodeByBcuid(pbo.getOrgBcuid));
 
-        case TestMessageType.PONG =>
-          if (cdl != null) {
-            cdl.countDown()
-          }
-          log.info("Get Pong Message:COST:" + (System.currentTimeMillis() - pbo.getRecvTime)
-            + ",TOTAL:" + (System.currentTimeMillis() - pbo.getWallTime));
-        case _ =>
-          ret.setRetCode(-1).setRetMessage("UNKNOW TYPE");
-      }
+          case TestMessageType.PONG =>
+            if (cdl != null) {
+              cdl.countDown()
+            }
+            log.info("Get Pong Message:COST:" + (System.currentTimeMillis() - pbo.getRecvTime)
+              + ",TOTAL:" + (System.currentTimeMillis() - pbo.getWallTime));
+          case _ =>
+            ret.setRetCode(-1).setRetMessage("UNKNOW TYPE");
+        }
 
-      //      }
-    } catch {
-      case fe: NodeInfoDuplicated => {
-        ret.clear();
-        ret.setRetCode(-1).setRetMessage("" + fe.getMessage)
-      }
-      case e: FBSException => {
-        ret.clear()
-        ret.setRetCode(-2).setRetMessage("" + e.getMessage)
-      }
-      case t: Throwable => {
-        log.error("error:", t);
-        ret.clear()
-        ret.setRetCode(-3).setRetMessage("" + t.getMessage)
-      }
-    } finally {
-      try {
-        handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+        //      }
+      } catch {
+        case fe: NodeInfoDuplicated => {
+          ret.clear();
+          ret.setRetCode(-1).setRetMessage("" + fe.getMessage)
+        }
+        case e: FBSException => {
+          ret.clear()
+          ret.setRetCode(-2).setRetMessage("" + e.getMessage)
+        }
+        case t: Throwable => {
+          log.error("error:", t);
+          ret.clear()
+          ret.setRetCode(-3).setRetMessage("" + t.getMessage)
+        }
       } finally {
-        MDCRemoveMessageID
+        try {
+          handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+        } finally {
+          MDCRemoveMessageID
+        }
       }
-
     }
   }
   //  override def getCmds(): Array[String] = Array(PWCommand.LST.name())

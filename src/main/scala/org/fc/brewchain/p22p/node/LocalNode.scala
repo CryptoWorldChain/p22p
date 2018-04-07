@@ -19,16 +19,16 @@ import org.brewchain.bcapi.gens.Oentity.OKey
 import org.slf4j.MDC
 import org.fc.brewchain.p22p.utils.LogHelper
 
-object NodeInstance extends OLog with PMNodeHelper with LogHelper {
+trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   //  val node_name = NodeHelper.getCurrNodeName
-  val NODE_ID_PROP = "org.bc.node.id"
-  val PROP_NODE_INFO = "zp.bc.node.info";
+  def netid(): String
 
-  private var rootnode: PNode = null;
+  def NODE_ID_PROP = "org.bc.pzp." + netid() + ".node.id"
+  def PROP_NODE_INFO = "org.bc.pzp." + netid() + ".node.info";
+
+  private var rootnode: PNode = PNode.NoneNode;
 
   def root(): PNode = rootnode;
-
-  def getNodeIdx: Int = rootnode.node_idx
 
   def isLocalNode(node: PNode): Boolean = {
     node == root || root.bcuid.equals(node.bcuid)
@@ -37,6 +37,7 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper {
   def isLocalNode(bcuid: String): Boolean = {
     root.bcuid.equals(bcuid)
   }
+
   def getFromDB(key: String, defaultv: String): String = {
     val v = Daos.odb.get(OKey.newBuilder().setData(ByteString.copyFrom(key.getBytes)).build())
     if (v == null || v.get() == null) {
@@ -45,23 +46,12 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper {
     } else {
       v.get.getInfo
     }
-
   }
 
   def syncInfo(node: PNode): Boolean = {
     if (Daos.odb == null) return false;
     Daos.odb.putInfo(PROP_NODE_INFO, serialize(node));
     true
-  }
-  def isReady(): Boolean = {
-    log.debug("check Node Instace:Daos.odb=" + Daos.odb)
-    if (!Daos.isDbReady()) return false;
-    if (rootnode == null)
-      initNode()
-    if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
-      MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
-    }
-    rootnode != null;
   }
   def newNode(nodeidx: Int = -1): PNode = {
     val kp = EncHelper.newKeyPair()
@@ -98,12 +88,17 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper {
                 log.debug("new node info:" + r.bcuid + ",idx=" + r.node_idx)
                 r
             }
+
+          if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
+            MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
+          }
+
         } catch {
           case e: Throwable =>
             log.warn("unknow Error.", e)
         } finally {
-          if (NodeInstance.root() != null) {
-            MDCSetBCUID()
+          if (root() != null) {
+            MDCSetBCUID(root()._bcuid)
           }
         }
       }
@@ -117,19 +112,19 @@ object NodeInstance extends OLog with PMNodeHelper with LogHelper {
       var v = 0;
       do {
         v = PNode.genIdx()
-      } while (getNodeIdx == v || test_bits.testBit(v))
+      } while (rootnode.node_idx == v || test_bits.testBit(v))
 
       Daos.odb.putInfo(NODE_ID_PROP, String.valueOf(v))
       rootnode = rootnode.changeIdx(v)
-      MDCSetBCUID()
       syncInfo(rootnode)
+      MDCSetBCUID(root()._bcuid)
       log.debug("changeNode Index=" + v)
       v
     }
   }
 
   def inNetwork(): Boolean = {
-    getNodeIdx > 0 && Networks.instance.node_bits.bitCount >= 2;
+    rootnode.node_idx > 0;
   }
 
   def isLocal(bcuid: String): Boolean = {

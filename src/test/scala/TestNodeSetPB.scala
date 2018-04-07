@@ -16,7 +16,6 @@ import org.fc.brewchain.p22p.node.router.RandomNR
 import onight.tfw.otransio.api.PacketHelper
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.router.CircleNR
-import org.fc.brewchain.p22p.node.NodeInstance
 import com.google.protobuf.StringValue
 import org.fc.brewchain.p22p.utils.NodeSetHelper
 import org.fc.brewchain.p22p.node.router.CMSCalc

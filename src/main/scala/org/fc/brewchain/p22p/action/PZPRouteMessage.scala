@@ -22,7 +22,6 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSJoin
 import org.fc.brewchain.p22p.pbgens.P22P.PRetJoin
 import org.fc.brewchain.p22p.PSMPZP
 import org.fc.brewchain.p22p.pbgens.P22P.PCommand
-import org.fc.brewchain.p22p.node.NodeInstance
 import java.net.URL
 import org.fc.brewchain.p22p.pbgens.P22P.PMNodeInfo
 import org.fc.brewchain.p22p.exception.NodeInfoDuplicated
@@ -71,72 +70,65 @@ object PZPRouteMessageService extends OLog with PBUtils with LService[PSRouteMes
   var cdl = new CountDownLatch(0)
 
   override def onPBPacket(pack: FramePacket, pbo: PSRouteMessage, handler: CompleteHandler) = {
-    if (NodeInstance.root() != null) {
-      MDCSetBCUID()
-    }
-
     var ret = PRetRouteMessage.newBuilder();
-    try {
-      val net = Networks.instance;
-      val nexthops = pb2scala(pbo.getNextHops);
-      val start = System.currentTimeMillis();
 
-      val strencbits = Networks.instance.node_strBits();
-      val body = pbo.getGcmd match {
-        case "VOTPZP" =>
-          val vbody = PVBase.newBuilder().mergeFrom(pbo.getBody).build();
-          MDCSetMessageID("V|" + vbody.getMessageUid);
-          vbody
-        //            Networks.instance.circleNR.broadcastMessage()(nextHops = nexthops)
-        case "TTTPZP" =>
-          //            Networks.instance.circleNR.broadcastMessage(pbo.getGcmd,
-          val vbody = PSTestMessage.newBuilder().mergeFrom(pbo.getBody).build()
-          MDCSetMessageID("T|" + vbody.getMessageid);
-          vbody
-        //              )(nextHops = nexthops)
+    val network = networkByID(pbo.getNid)
+    if (network == null) {
+      ret.setRetCode(-1).setRetMessage("unknow network:" + pbo.getNid)
+      handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+    } else {
 
-        case _ =>
-          log.warn("unknow message gcmd:" + pbo.getGcmd)
-          null
-      }
+      MDCSetBCUID(network)
 
-      log.debug("nexthops=" + nexthops);
-      if (strencbits.equals(pbo.getEncbits) && body != null) {
-        Networks.instance.circleNR.broadcastMessage(pbo.getGcmd, body)(nextHops = nexthops)
-      } else {
-        log.warn("bit end not equals message gcmd=:" + pbo.getGcmd + ",netenc=" + strencbits
-          + ",pboenc=" + pbo.getEncbits+",body=");
-        val bits = BitMap.mapToBigInt(pbo.getEncbits)
-        Networks.instance.bwallMessage(pbo.getGcmd, body, bits)
-        //                BitMap.hexToMapping(pbo.get))
-      }
-
-      //      Networks.instance.wallMessage(pbo.getGcmd, pbo.getBody, messageid);
-      ret.setPendingCount(Networks.instance.pendingNodes.size)
-      ret.setDnodeCount(Networks.instance.directNodes.size)
-      ret.setBitencs(Networks.instance.node_strBits)
-      ret.setRetMessage("TotalCost:" + (System.currentTimeMillis() - start))
-
-      //      }
-    } catch {
-      case fe: NodeInfoDuplicated => {
-        ret.clear();
-        ret.setRetCode(-1).setRetMessage("" + fe.getMessage)
-      }
-      case e: FBSException => {
-        ret.clear()
-        ret.setRetCode(-2).setRetMessage("" + e.getMessage)
-      }
-      case t: Throwable => {
-        log.error("error:", t);
-        ret.clear()
-        ret.setRetCode(-3).setRetMessage("" + t.getMessage)
-      }
-    } finally {
       try {
-        handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+        val net = networkByID(pbo.getNid);
+        val nexthops = pb2scala(pbo.getNextHops);
+        val start = System.currentTimeMillis();
+        MDCSetMessageID("V|" + pbo.getMessageid);
+
+        val strencbits = net.node_strBits();
+        
+        
+        val bodybb = Right(pbo.getBody)
+        
+        log.debug("nexthops=" + nexthops);
+        if (strencbits.equals(pbo.getEncbits) && bodybb != null) {
+          net.wallMessage(pbo.getGcmd, bodybb , pbo.getMessageid)
+        } else {
+          log.warn("bit end not equals message gcmd=:" + pbo.getGcmd + ",netenc=" + strencbits
+            + ",pboenc=" + pbo.getEncbits + ",body=");
+          val bits = BitMap.mapToBigInt(pbo.getEncbits)
+          net.bwallMessage(pbo.getGcmd,  bodybb, bits)
+          //                BitMap.hexToMapping(pbo.get))
+        }
+
+        //      net.wallMessage(pbo.getGcmd, pbo.getBody, messageid);
+        ret.setPendingCount(net.pendingNodes.size)
+        ret.setDnodeCount(net.directNodes.size)
+        ret.setBitencs(net.node_strBits)
+        ret.setRetMessage("TotalCost:" + (System.currentTimeMillis() - start))
+
+        //      }
+      } catch {
+        case fe: NodeInfoDuplicated => {
+          ret.clear();
+          ret.setRetCode(-1).setRetMessage("" + fe.getMessage)
+        }
+        case e: FBSException => {
+          ret.clear()
+          ret.setRetCode(-2).setRetMessage("" + e.getMessage)
+        }
+        case t: Throwable => {
+          log.error("error:", t);
+          ret.clear()
+          ret.setRetCode(-3).setRetMessage("" + t.getMessage)
+        }
       } finally {
-        MDCRemoveMessageID
+        try {
+          handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
+        } finally {
+          MDCRemoveMessageID
+        }
       }
     }
   }
