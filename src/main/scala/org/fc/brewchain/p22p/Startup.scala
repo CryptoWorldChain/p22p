@@ -43,7 +43,7 @@ class BackgroundLoader() extends Runnable with OLog {
     }
 
     val networks = Daos.props.get("org.bc.pzp.networks", "raft").split(",").toList
-    println("networks:" + networks)
+    log.debug("networks:" + networks)
     networks.map { x =>
       val net = new Network(x.trim(), Daos.props.get("org.bc.pzp.networks." + x.trim() + ".nodelist", "tcp://127.0.0.1:5100"));
       Networks.netsByID.put(net.netid, net)

@@ -88,12 +88,11 @@ object PZPRouteMessageService extends OLog with PBUtils with LService[PSRouteMes
 
         val strencbits = net.node_strBits();
         
-        
         val bodybb = Right(pbo.getBody)
         
         log.debug("nexthops=" + nexthops);
         if (strencbits.equals(pbo.getEncbits) && bodybb != null) {
-          net.wallMessage(pbo.getGcmd, bodybb , pbo.getMessageid)
+          net.wallMessage(pbo.getGcmd, bodybb , pbo.getMessageid)(nexthops)
         } else {
           log.warn("bit end not equals message gcmd=:" + pbo.getGcmd + ",netenc=" + strencbits
             + ",pboenc=" + pbo.getEncbits + ",body=");

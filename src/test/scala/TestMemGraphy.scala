@@ -56,7 +56,7 @@ object TestMemGraphy extends OLog {
 //    }
     //    nodes.map { node => println(node.directNode.size) }
     var start = System.currentTimeMillis();
-    val sendcc = 10;
+    val sendcc = 1;
     val msg = PVBase.newBuilder().setMessageUid(UUIDGenerator.generate()).build()
     //    CircleNR.resetMap(nodeCount);
     val circleNR = CircleNR(bitenc)

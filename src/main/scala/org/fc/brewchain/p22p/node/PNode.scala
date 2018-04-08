@@ -28,7 +28,7 @@ import scala.util.Either
 import com.google.protobuf.ByteString
 
 sealed trait Node {
-  def processMessage(gcmd: String, body: Either[Message,ByteString])(implicit network: Network): Unit
+  def processMessage(gcmd: String, body: Either[Message, ByteString])(implicit network: Network): Unit
   def changeIdx(idx: Int): Node;
   def name: String
   def node_idx: Int;
@@ -48,11 +48,11 @@ case class PNode(_name: String, _node_idx: Int, //node info
     _sign: String,
     protocol: String = "", address: String = "", port: Int = 0, //
     _startup_time: Long = System.currentTimeMillis(), //
-    _pub_key: String = null, //
+    _pub_key: String = "", //
     _counter: CCSet = CCSet(),
     _try_node_idx: Int = 0,
     _bcuid: String = UUIDGenerator.generate(),
-    _pri_key: String = null) extends Node with OLog {
+    _pri_key: String = "") extends Node with OLog {
 
   def uri(): String = protocol + "://" + address + ":" + port;
   def uris(): Array[String] = Array(protocol + "://" + address + ":" + port);
@@ -67,7 +67,7 @@ case class PNode(_name: String, _node_idx: Int, //node info
   def sign(): String = _sign
   def try_node_idx(): Int = _try_node_idx
 
-  override def processMessage(gcmd: String, body: Either[Message,ByteString])(implicit network: Network): Unit = {
+  override def processMessage(gcmd: String, body: Either[Message, ByteString])(implicit network: Network): Unit = {
     //    counter.recv.incrementAndGet() 
     log.debug("procMessage:@" + node_idx + ",bcuid=" + bcuid + ",gcmd:" + gcmd)
     MessageSender.postMessage(gcmd, body, this)
@@ -92,11 +92,12 @@ object PNode {
   def fromURL(url: String): PNode = {
     val u = new URL(url);
     val n = new PNode(_name = u.getHost, _node_idx = 0, "", protocol = u.getProtocol, address = u.getHost, port = u.getPort,
-      _bcuid = Base64.encodeBase64URLSafeString(url.getBytes))
+      _bcuid = Base64.encodeBase64URLSafeString(url.getBytes),
+      _pub_key = "")
     n
   }
 
-  def NoneNode: PNode = PNode(_name = "", _node_idx = 0, _sign = "")
+  val NoneNode: PNode = PNode(_name = "", _node_idx = 0, _sign = "")
 
   def signNode(name: String, node_idx: Int, //node info
     protocol: String = "", address: String = "", port: Int = 0, //
@@ -159,7 +160,7 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
 
   var masternode: PNode = pnodes(0);
 
-  override def processMessage(gcmd: String, body: Either[Message,ByteString])(implicit network: Network): Unit = {
+  override def processMessage(gcmd: String, body: Either[Message, ByteString])(implicit network: Network): Unit = {
     //    val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     //    MessageSender.postMessage(gcmd, body, this)
     log.debug("procMessage:@" + node_idx + ",bcuid=" + bcuid + ",gcmd:" + gcmd)

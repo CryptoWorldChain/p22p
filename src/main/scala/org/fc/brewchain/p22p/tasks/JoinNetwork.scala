@@ -27,9 +27,11 @@ import org.fc.brewchain.p22p.node.Networks
 import scala.collection.JavaConversions._
 import java.util.concurrent.ConcurrentHashMap
 import org.fc.brewchain.p22p.node.Network
+import sun.rmi.log.LogHandler
+import org.fc.brewchain.p22p.utils.LogHelper
  
 //投票决定当前的节点
-case class JoinNetwork(network:Network,statupNodes:String) extends SRunner {
+case class JoinNetwork(network:Network,statupNodes:String) extends SRunner with LogHelper {
   def getName() = "JoinNetwork"
   val sameNodes = new HashMap[Integer, PNode]();
   val pendingJoinNodes = new ConcurrentHashMap[String, PNode]();
@@ -42,6 +44,7 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner {
       log.debug("CurrentNode In Network");
     } else {
       try {
+        MDCSetBCUID(network);
         val namedNodes = (statupNodes.split(",").map { x =>
           log.debug("x=" + x)
           PNode.fromURL(x);
@@ -53,7 +56,8 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner {
           //          val n = namedNodes(0);
           log.debug("JoinNetwork :Run----Try to Join :MainNet=" + n.uri + ",cur=" + network.root.uri);
           if (!network.root.equals(n)) {
-            val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()));
+            val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()))
+            .setNid(network.netid);
             log.debug("JoinNetwork :Start to Connect---:" + n.uri);
             MessageSender.sendMessage("JINPZP", joinbody.build(), n, new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
@@ -66,6 +70,7 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner {
                   MessageSender.dropNode(n)
                   val newN = fromPMNode(retjoin.getMyInfo)
                   MessageSender.changeNodeName(n.bcuid, newN.bcuid);
+                  network.onlineMap.put(newN.bcuid(), newN)
                   network.addPendingNode(newN);
                 } else if (retjoin.getRetCode() == 0) {
                   joinedNodes.put(n.uri.hashCode(), n);

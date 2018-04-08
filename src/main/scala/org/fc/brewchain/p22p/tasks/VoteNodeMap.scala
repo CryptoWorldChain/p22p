@@ -44,7 +44,9 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner {
       vbase.setMType(PVType.NETWORK_IDX)
       var pendingbits = BigInt(1)
       //init. start to vote.
-      if (network.joinNetwork.pendingJoinNodes.size() / 2 > network.onlineMap.size) {
+      if (network.joinNetwork.pendingJoinNodes.size() / 2 > network.onlineMap.size
+        || network.onlineMap.size <= 0 
+        || (network.pendingNodes.size <= 0 && network.directNodes.size <= 0)) {
         log.info("cannot vote for pendingJoinNodes Size bigger than online half:PendJoin=" +
           network.joinNetwork.pendingJoinNodes.size() + ": Online=" + network.onlineMap.size)
         //for fast load

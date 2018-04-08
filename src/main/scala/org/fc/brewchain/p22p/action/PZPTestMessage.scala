@@ -71,20 +71,19 @@ object PZPTestMessageService extends OLog with PBUtils with LService[PSTestMessa
         pbo.getMessageid
       }
     var ret = PRetTestMessage.newBuilder();
-    val network = networkByID(pbo.getNid)
+    implicit val network = networkByID(pbo.getNid)
     if (network == null) {
       ret.setRetCode(-1).setRetMessage("unknow network:" + pbo.getNid)
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
     } else {
-      MDCSetBCUID(network)
-      MDCSetMessageID(pbo.getTypeValue + "|" + messageid);
+//      MDCSetBCUID(network)
+//      MDCSetMessageID(pbo.getTypeValue + "|" + messageid);
       val cdl = if (cdlMap.containsKey(messageid)) cdlMap.get(messageid) else {
         new CountDownLatch(0);
       }
       log.debug("TestMessage:Type=" + pbo.getType)
 
       try {
-        implicit val network = networkByID(pbo.getNid)
         pbo.getType match {
           case TestMessageType.WALL =>
             log.debug("Get Wall Message:COST:" + (System.currentTimeMillis() - pbo.getWallTime));
@@ -92,40 +91,36 @@ object PZPTestMessageService extends OLog with PBUtils with LService[PSTestMessa
               ret.setRetCode(-2).setRetMessage("waiting for last call:");
             } else {
 
-              val cdlr = new CountDownLatch(network.directNodes.size +
-                network.pendingNodes.size)
-              cdlMap.put(messageid, cdlr);
+//              val cdlr = new CountDownLatch(network.directNodes.size +
+//                network.pendingNodes.size)
+//              cdlMap.put(messageid, cdlr);
               val start = System.currentTimeMillis();
-
+              val msg=Left(pbo.toBuilder()
+                  .setMessageid(messageid).setWallTime(System.currentTimeMillis())
+                  .setFromBcuid(network.root().bcuid)
+                  .setType(TestMessageType.PING)
+                  .setOrgBcuid(network.root().bcuid)
+                  .setNid(pbo.getNid)
+                  .build());
               if (pbo.getDwall) {
-                network.dwallMessage("TTTPZP", Left(pbo.toBuilder()
-                  .setMessageid(messageid).setWallTime(System.currentTimeMillis())
-                  .setFromBcuid(network.root().bcuid)
-                  .setType(TestMessageType.PING)
-                  .setOrgBcuid(network.root().bcuid)
-                  .build()), messageid);
+                network.dwallMessage("TTTPZP", msg, messageid);
               } else {
-                network.wallMessage("TTTPZP", Left(pbo.toBuilder()
-                  .setMessageid(messageid).setWallTime(System.currentTimeMillis())
-                  .setFromBcuid(network.root().bcuid)
-                  .setType(TestMessageType.PING)
-                  .setOrgBcuid(network.root().bcuid)
-                  .build()), messageid);
+                network.wallMessage("TTTPZP", msg, messageid);
               }
               if (pbo.getBlock) {
 
                 Thread.currentThread().synchronized {
                   try {
-                    cdlr.await()
+//                    cdlr.await()
                   } catch {
                     case _: Throwable =>
                   }
                 }
               }
-              cdlMap.remove(messageid)
+//              cdlMap.remove(messageid)
 
-              ret.setDnodeCount(network.directNodes.size)
-              ret.setPendingCount(network.pendingNodes.size)
+//              ret.setDnodeCount(network.directNodes.size)
+//              ret.setPendingCount(network.pendingNodes.size)
               ret.setBitencs(network.node_strBits)
               ret.setRetMessage("TotalCost:" + (System.currentTimeMillis() - start))
               log.debug("get Ret:" + (System.currentTimeMillis() - start))
@@ -135,7 +130,8 @@ object PZPTestMessageService extends OLog with PBUtils with LService[PSTestMessa
             Thread.sleep(pbo.getPs + 1)
             MessageSender.postMessage("TTTPZP", Left(pbo.toBuilder()
               .setRecvTime(System.currentTimeMillis())
-              .setType(TestMessageType.PONG)
+              .setType(TestMessageType.PONG)  
+              .setNid(pbo.getNid)
               .setFromBcuid(network.root().bcuid)
               .build()),
               network.nodeByBcuid(pbo.getOrgBcuid));
@@ -144,7 +140,7 @@ object PZPTestMessageService extends OLog with PBUtils with LService[PSTestMessa
             if (cdl != null) {
               cdl.countDown()
             }
-            log.info("Get Pong Message:COST:" + (System.currentTimeMillis() - pbo.getRecvTime)
+            log.debug("Get Pong Message:COST:" + (System.currentTimeMillis() - pbo.getRecvTime)
               + ",TOTAL:" + (System.currentTimeMillis() - pbo.getWallTime));
           case _ =>
             ret.setRetCode(-1).setRetMessage("UNKNOW TYPE");
@@ -169,7 +165,7 @@ object PZPTestMessageService extends OLog with PBUtils with LService[PSTestMessa
         try {
           handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
         } finally {
-          MDCRemoveMessageID
+//          MDCRemoveMessageID
         }
       }
     }

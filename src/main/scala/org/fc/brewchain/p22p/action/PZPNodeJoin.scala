@@ -101,6 +101,7 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
       } catch {
         case fe: NodeInfoDuplicated => {
           ret.clear();
+          ret.setMyInfo(toPMNode(network.root))
           ret.addNodes(toPMNode(network.root));
           ret.setRetCode(-1).setRetMessage(fe.getMessage)
         }

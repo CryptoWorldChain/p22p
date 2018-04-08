@@ -44,38 +44,46 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
   }
   override def broadcastMessage(gcmd: String, body: Either[Message, ByteString], from: PNode)(implicit toN: PNode,
     nextHops: IntNode = FullNodeSet(),
-    network: Network,messageid:String): Unit = {
+    network: Network, messageid: String): Unit = {
 
-    //    log.debug("broadcastMessage:cur=@" + toN.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
+//        log.debug("broadcastMessage:cur=@" + toN.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
     toN.counter.recv.incrementAndGet();
     //    network.updateConnect(from.node_idx, to.node_idx)
     toN.processMessage(gcmd, body)
     nextHops match {
       case f: FullNodeSet =>
         //from begin
-        val (treere, result) = CMSCalc.calcRouteSets(idxMapRemap.get(toN.node_idx).get)(cminfo.circleMap)
-        //                log.debug("CMSCalc:" + idxMap)
-        idxMap.get(treere.fromIdx) match {
-          case Some(idx) =>
-            network.nodeByIdx(idx) match {
-              case Some(n) =>
-                treere.treeHops.nodes.map { nids =>
-                  routeMessage(gcmd, body)(n, nids, network,messageid)
+        idxMapRemap.get(toN.node_idx) match {
+          case Some(v) =>
+            val (treere, result) = CMSCalc.calcRouteSets(v)(cminfo.circleMap)
+            //                log.debug("CMSCalc:" + idxMap)
+            idxMap.get(treere.fromIdx) match {
+              case Some(idx) =>
+                network.nodeByIdx(idx) match {
+                  case Some(n) =>
+                    treere.treeHops.nodes.map { nids =>
+                      routeMessage(gcmd, body)(n, nids, network, messageid)
+                    }
+                  case _ =>
+                    log.warn("not found id:" + treere.fromIdx + "==>idx=" + idx)
                 }
               case _ =>
-                log.warn("not found id:" + treere.fromIdx + "==>idx=" + idx)
+                log.warn("not found Map:treeidx=" + treere.fromIdx)
             }
-          case _ =>
-            log.warn("not found Map:treeidx=" + treere.fromIdx)
+          case None =>
+            log.warn("cannot find map in idxMapRemap:nid=" + toN.node_idx + "<idxMapRemap=" +
+              idxMapRemap)
+
         }
+
       case none: EmptySet =>
         log.debug("Leaf Node");
       case ns: NodeSet =>
         ns.nodes.map { nids =>
-          routeMessage(gcmd, body)(toN, nids, network,messageid)
+          routeMessage(gcmd, body)(toN, nids, network, messageid)
         }
       case subset: DeepTreeSet =>
-        routeMessage(gcmd, body)(toN, subset, network,messageid)
+        routeMessage(gcmd, body)(toN, subset, network, messageid)
       case subset: IntNode =>
         log.warn("unknow subset:" + subset)
     }
@@ -83,7 +91,7 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
   }
   override def routeMessage(gcmd: String, body: Either[Message, ByteString])(implicit from: PNode, //
     nextHops: IntNode,
-    network: Network,messageid:String) {
+    network: Network, messageid: String) {
     //        log.debug("routeMessage:from=" + from.node_idx + ",next=" + nextHops)
     from.counter.send.incrementAndGet()
     nextHops match {
@@ -105,6 +113,7 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
                   .setFromIdx(from.node_idx)
                   .setGcmd(gcmd)
                   .setMessageid(messageid)
+                  .setNid(network.netid)
                   .setNetwork("local").setNextHops(scala2pb(ts.treeHops)).build();
                 MessageSender.postMessage("RRRPZP", Left(vbody), n);
               //                broadcastMessage(gcmd,body, from)(n, ts.treeHops, network)

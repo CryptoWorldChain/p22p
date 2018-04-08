@@ -55,7 +55,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   }
   def newNode(nodeidx: Int = -1): PNode = {
     val kp = EncHelper.newKeyPair()
-    val newroot = PNode.signNode(NodeHelper.getCurrNodeName, node_idx = nodeidx, protocol = "tcp",
+    val newroot = PNode.signNode(NodeHelper.getCurrNodeName, node_idx = -1, protocol = "tcp",
       address = NodeHelper.getCurrNodeListenOutAddr,
       NodeHelper.getCurrNodeListenOutPort,
       System.currentTimeMillis(), kp.pubkey,
@@ -67,7 +67,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   }
   def initNode() = {
     this.synchronized {
-      if (rootnode == null) //second entry
+      if (rootnode == PNode.NoneNode) //second entry
       {
         try {
           val nodeidx = PNode.genIdx()
@@ -123,9 +123,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
     }
   }
 
-  def inNetwork(): Boolean = {
-    rootnode.node_idx > 0;
-  }
+  
 
   def isLocal(bcuid: String): Boolean = {
     StringUtils.equals(root().bcuid, bcuid);

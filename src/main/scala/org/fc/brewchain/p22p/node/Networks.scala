@@ -27,6 +27,8 @@ import org.fc.brewchain.p22p.pbft.VoteQueue
 
 import scala.collection.JavaConversions._
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.node.router.FullNodeSet
+import org.fc.brewchain.p22p.node.router.IntNode
 
 case class BitEnc(bits: BigInt) {
   val strEnc: String = BitMap.hexToMapping(bits);
@@ -82,6 +84,10 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         None
       }
     }
+  }
+
+  def inNetwork(): Boolean = {
+    root().node_idx > 0 && nodeByIdx(root().node_idx()) != None;
   }
 
   def removeDNode(node: PNode): Option[PNode] = {
@@ -148,11 +154,11 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
       }
   }
 
-  def wallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
+  def wallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "")(implicit nextHops: IntNode = FullNodeSet()): Unit = {
     if (circleNR.encbits.bitCount > 0) {
-      log.debug("wall to direct:" + messageId + ",dnodescount=" + directNodes.size + ",enc=" +
-        node_strBits())
-      circleNR.broadcastMessage(gcmd, body, from = root())(toN = root(), network = this, messageid = messageId)
+      //      log.debug("wall to DCircle:" + messageId + ",Dnodescount=" + directNodes.size + ",enc=" +
+      //        node_strBits())
+      circleNR.broadcastMessage(gcmd, body, from = root())(toN = root(), network = this, nextHops = nextHops, messageid = messageId)
     }
     pendingNodes.map(n =>
       {

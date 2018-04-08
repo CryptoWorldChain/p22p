@@ -67,13 +67,16 @@ object MessageSender extends NActor with OLog {
   }
 
   def postMessage(gcmd: String, body: Either[Message, ByteString], node: PNode)(implicit network: Network): Unit = {
+//    if("TTTPZP".equals(gcmd)){
+//      return;
+//    }
     val pack = body match {
       case Left(m) => BCPacket.buildAsyncFrom(m, gcmd.substring(0, 3), gcmd.substring(3));
       case Right(b) => BCPacket.buildAsyncFrom(b.toByteArray(), gcmd.substring(0, 3), gcmd.substring(3));
     }
     appendUid(pack, node)
     //    log.trace("postMessage:" + pack)
-    log.trace("postMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
+    //    log.trace("postMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     sockSender.post(pack)
   }
 
