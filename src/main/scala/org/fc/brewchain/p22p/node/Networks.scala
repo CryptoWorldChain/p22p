@@ -35,11 +35,11 @@ case class BitEnc(bits: BigInt) {
 }
 case class Network(netid: String, nodelist: String) extends OLog with LocalNode //
 {
-  val directNodeByBcuid: Map[String, PNode] = Map.empty[String, PNode];
-  val directNodeByIdx: Map[Int, PNode] = Map.empty[Int, PNode];
-  val pendingNodeByBcuid: Map[String, PNode] = Map.empty[String, PNode];
+  val directNodeByBcuid: Map[String, Node] = Map.empty[String, Node];
+  val directNodeByIdx: Map[Int, Node] = Map.empty[Int, Node];
+  val pendingNodeByBcuid: Map[String, Node] = Map.empty[String, Node];
   val connectedMap: Map[Int, Map[Int, Int]] = Map.empty[Int, Map[Int, Int]];
-  val onlineMap: Map[String, PNode] = Map.empty[String, PNode];
+  val onlineMap: Map[String, Node] = Map.empty[String, Node];
 
   //  var _node_bits = BigInt(0)
   var bitenc = BitEnc(BigInt(0))
@@ -59,14 +59,14 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   val noneNode = PNode(_name = "NONE", _node_idx = 0, "",
     _try_node_idx = 0)
 
-  def nodeByBcuid(name: String): PNode = directNodeByBcuid.getOrElse(name, noneNode);
+  def nodeByBcuid(name: String): Node = directNodeByBcuid.getOrElse(name, noneNode);
   def nodeByIdx(idx: Int) = directNodeByIdx.get(idx);
 
-  def directNodes: Iterable[PNode] = directNodeByBcuid.values
+  def directNodes: Iterable[Node] = directNodeByBcuid.values
 
-  def pendingNodes: Iterable[PNode] = pendingNodeByBcuid.values
+  def pendingNodes: Iterable[Node] = pendingNodeByBcuid.values
 
-  def addDNode(pnode: PNode): Option[PNode] = {
+  def addDNode(pnode: Node): Option[Node] = {
 
     val node = pnode.changeIdx(pnode.try_node_idx)
     this.synchronized {
@@ -77,6 +77,9 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         directNodeByBcuid.put(node.bcuid, node)
         resetNodeBits(node_bits.setBit(node.node_idx));
 
+        if (StringUtils.isNotBlank(node.uri)) {
+          MessageSender.setDestURI(node.bcuid, node.uri);
+        }
         directNodeByIdx.put(node.node_idx, node);
         removePendingNode(node)
         Some(node)
@@ -87,10 +90,10 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   }
 
   def inNetwork(): Boolean = {
-    root().node_idx > 0 && nodeByIdx(root().node_idx()) != None;
+    root().node_idx > 0 && nodeByIdx(root().node_idx) != None;
   }
 
-  def removeDNode(node: PNode): Option[PNode] = {
+  def removeDNode(node: Node): Option[Node] = {
     if (directNodeByBcuid.contains(node.bcuid)) {
       resetNodeBits(node_bits.clearBit(node.node_idx));
       directNodeByBcuid.remove(node.bcuid)
@@ -100,7 +103,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   }
   //  var node_idx = _node_idx; //全网确定之后的节点id
 
-  def addPendingNode(node: PNode): Boolean = {
+  def addPendingNode(node: Node): Boolean = {
     this.synchronized {
       if (directNodeByBcuid.contains(node.bcuid)) {
         log.debug("directNode exists in DirectNode bcuid=" + node.bcuid);
@@ -109,13 +112,14 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         //        log.debug("pendingNode exists PendingNodes bcuid=" + node.bcuid);
         false
       } else {
+
         pendingNodeByBcuid.put(node.bcuid, node);
         log.debug("addpending:" + pendingNodeByBcuid.size + ",p=" + node.bcuid)
         true
       }
     }
   }
-  def pending2DirectNode(nodes: List[PNode]): Boolean = {
+  def pending2DirectNode(nodes: List[Node]): Boolean = {
     this.synchronized {
       nodes.map { node =>
         addDNode(node)
@@ -123,7 +127,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
     }
   }
 
-  def removePendingNode(node: PNode): Boolean = {
+  def removePendingNode(node: Node): Boolean = {
     this.synchronized {
       if (!pendingNodeByBcuid.contains(node.bcuid)) {
         false
@@ -194,14 +198,14 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   }
   def wallOutsideMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
     directNodes.map { n =>
-      if (!isLocal(n)) {
+      if (!isLocalNode(n)) {
         log.debug("post to directNode:bcuid=" + n.bcuid + ",messageid=" + messageId);
         MessageSender.postMessage(gcmd, body, n)(this)
       }
     }
     pendingNodes.map(n =>
       {
-        if (!isLocal(n)) {
+        if (!isLocalNode(n)) {
           log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
           MessageSender.postMessage("VOTPZP", body, n)(this)
         }

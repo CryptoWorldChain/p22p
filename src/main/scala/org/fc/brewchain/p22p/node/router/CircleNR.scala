@@ -16,6 +16,7 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSRouteMessage
 import org.fc.brewchain.bcapi.crypto.BitMap
 import org.fc.brewchain.p22p.utils.NodeSetHelper
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.node.Node
 
 case class CMSetInfo(nodecount: Int, circleMap: Map[Int, Set[Int]])
 
@@ -42,11 +43,10 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
     }
     ret
   }
-  override def broadcastMessage(gcmd: String, body: Either[Message, ByteString], from: PNode)(implicit toN: PNode,
+  override def broadcastMessage(gcmd: String, body: Either[Message, ByteString], from: Node)(implicit toN: Node,
     nextHops: IntNode = FullNodeSet(),
     network: Network, messageid: String): Unit = {
-
-//        log.debug("broadcastMessage:cur=@" + toN.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
+    //    log.debug("broadcastMessage:cur=@" + toN.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
     toN.counter.recv.incrementAndGet();
     //    network.updateConnect(from.node_idx, to.node_idx)
     toN.processMessage(gcmd, body)
@@ -67,7 +67,7 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
                   case _ =>
                     log.warn("not found id:" + treere.fromIdx + "==>idx=" + idx)
                 }
-              case _ =>
+              case _ => 
                 log.warn("not found Map:treeidx=" + treere.fromIdx)
             }
           case None =>
@@ -89,7 +89,7 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
     }
 
   }
-  override def routeMessage(gcmd: String, body: Either[Message, ByteString])(implicit from: PNode, //
+  override def routeMessage(gcmd: String, body: Either[Message, ByteString])(implicit from: Node, //
     nextHops: IntNode,
     network: Network, messageid: String) {
     //        log.debug("routeMessage:from=" + from.node_idx + ",next=" + nextHops)

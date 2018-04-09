@@ -22,6 +22,7 @@ import scala.collection.TraversableLike
 import onight.tfw.otransio.api.NonePackSender
 import org.fc.brewchain.p22p.node.Network
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.node.Node
 
 @NActorProvider
 object MessageSender extends NActor with OLog {
@@ -31,8 +32,8 @@ object MessageSender extends NActor with OLog {
   @BeanProperty
   var sockSender: IPacketSender = new NonePackSender();
 
-  def appendUid(pack: BCPacket, node: PNode)(implicit network: Network): Unit = {
-    if (network.isLocal(node)) {
+  def appendUid(pack: BCPacket, node: Node)(implicit network: Network): Unit = {
+    if (network.isLocalNode(node)) {
       pack.getExtHead.remove(PackHeader.PACK_TO);
     } else {
       pack.putHeader(PackHeader.PACK_TO, node.bcuid);
@@ -41,7 +42,7 @@ object MessageSender extends NActor with OLog {
     pack.putHeader(PackHeader.PACK_FROM, network.root().bcuid);
   }
 
-  def sendMessage(gcmd: String, body: Message, node: PNode, cb: CallBack[FramePacket])(implicit network: Network) {
+  def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket])(implicit network: Network) {
     val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node)
     log.trace("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
@@ -66,7 +67,7 @@ object MessageSender extends NActor with OLog {
     }
   }
 
-  def postMessage(gcmd: String, body: Either[Message, ByteString], node: PNode)(implicit network: Network): Unit = {
+  def postMessage(gcmd: String, body: Either[Message, ByteString], node: Node)(implicit network: Network): Unit = {
 //    if("TTTPZP".equals(gcmd)){
 //      return;
 //    }
@@ -80,18 +81,22 @@ object MessageSender extends NActor with OLog {
     sockSender.post(pack)
   }
 
-  def replyPostMessage(gcmd: String, node: PNode, body: Message)(implicit network: Network) {
+  def replyPostMessage(gcmd: String, node: Node, body: Message)(implicit network: Network) {
     val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node); //frompack.getExtStrProp(PackHeader.PACK_FROM));
     sockSender.post(pack)
   }
 
-  def dropNode(node: PNode) {
+  def dropNode(node: Node) {
     sockSender.tryDropConnection(node.bcuid);
   }
 
   def changeNodeName(oldName: String, newName: String) {
     sockSender.changeNodeName(oldName, newName);
+  }
+  
+  def setDestURI(bcuid: String, uri: String) {
+    sockSender.setDestURI(bcuid, uri);
   }
 }
 

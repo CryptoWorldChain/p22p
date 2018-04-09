@@ -110,7 +110,7 @@ case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner wi
         case PBFTStage.REJECT =>
           reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
           //        log.info("MergeSuccess.Local!:V=" + pbo.getV + ",N=" + pbo.getN + ",org=" + pbo.getOriginBcuid)
-          if (network.isLocal(pbo.getOriginBcuid)) {
+          if (network.isLocalNode(pbo.getOriginBcuid)) {
             log.debug("omit reject Message for local:" + pbo.getFromBcuid);
             //          } else if (pbo.getRejectState == PBFTStage.REJECT) {
             //            log.debug("omit reject Message for remote:" + pbo.getFromBcuid);
@@ -144,7 +144,7 @@ case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner wi
             case PBFTStage.REJECT =>
               log.debug("Vote::Reject =" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid);
               reply.setState(pbo.getState).setRejectState(PBFTStage.REJECT)
-              if (network.isLocal(pbo.getOriginBcuid)) {
+              if (network.isLocalNode(pbo.getOriginBcuid)) {
                 log.debug("omit reject Message afterVote for local:" + pbo.getOriginBcuid);
                 //              } else if (pbo.getRejectState == PBFTStage.REJECT) {
                 //                log.debug("omit reject Message for remote:" + pbo.getOriginBcuid);

@@ -9,10 +9,11 @@ import onight.oapi.scala.traits.OLog
 import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.p22p.node.Network
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.node.Node
 
 trait MessageRouter extends OLog {
 
-  def broadcastMessage(gcmd:String,body: Either[Message,ByteString], from: PNode)(implicit to: PNode,
+  def broadcastMessage(gcmd:String,body: Either[Message,ByteString], from: Node)(implicit to: Node,
     nextHops: IntNode = FullNodeSet(),
     network: Network,messageid:String): Unit = {
 //        log.debug("broadcastMessage:cur=@" + to.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
@@ -34,7 +35,7 @@ trait MessageRouter extends OLog {
 
   }
 
-  def routeMessage(gcmd:String,body: Either[Message,ByteString])(implicit from: PNode,
+  def routeMessage(gcmd:String,body: Either[Message,ByteString])(implicit from: Node,
     nextHops: IntNode = FullNodeSet(), 
     network: Network,messageid:String)
 }

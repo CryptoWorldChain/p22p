@@ -24,9 +24,9 @@ enum PCommand {
 
 message PMNodeInfo{
 	string node_name = 1;//节点
-	string protocol = 2;//节点链接支持的协议类型，tcp，http/https，udp，mq……
-	string address = 3;//地址
-	int32 port = 4;//端口
+	string uri = 2;//节点链接支持的协议类型，tcp，http/https，udp，mq……
+	//string address = 3;//地址
+	//int32 port = 4;//端口
 	int64 startup_time = 5;//启动时间
 	string pub_key = 6;//该节点的公钥
 	string bcuid = 7;//节点的唯一ID

@@ -26,11 +26,11 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   def NODE_ID_PROP = "org.bc.pzp." + netid() + ".node.id"
   def PROP_NODE_INFO = "org.bc.pzp." + netid() + ".node.info";
 
-  private var rootnode: PNode = PNode.NoneNode;
+  private var rootnode: Node = PNode.NoneNode;
 
-  def root(): PNode = rootnode;
+  def root(): Node = rootnode;
 
-  def isLocalNode(node: PNode): Boolean = {
+  def isLocalNode(node: Node): Boolean = {
     node == root || root.bcuid.equals(node.bcuid)
   }
 
@@ -48,19 +48,18 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
     }
   }
 
-  def syncInfo(node: PNode): Boolean = {
+  def syncInfo(node: Node): Boolean = {
     if (Daos.odb == null) return false;
     Daos.odb.putInfo(PROP_NODE_INFO, serialize(node));
     true
   }
   def newNode(nodeidx: Int = -1): PNode = {
     val kp = EncHelper.newKeyPair()
-    val newroot = PNode.signNode(NodeHelper.getCurrNodeName, node_idx = -1, protocol = "tcp",
-      address = NodeHelper.getCurrNodeListenOutAddr,
-      NodeHelper.getCurrNodeListenOutPort,
-      System.currentTimeMillis(), kp.pubkey,
+    val newroot = PNode.signNode(NodeHelper.getCurrNodeName, node_idx = -1,
+      uri = "tcp://" + NodeHelper.getCurrNodeListenOutAddr + ":" + NodeHelper.getCurrNodeListenOutPort,
+      System.currentTimeMillis(), pub_key = kp.pubkey,
       try_node_idx = nodeidx,
-      bcuid = kp.bcuid,
+      bcuid = netid().head.toUpper+kp.bcuid,
       pri_key = kp.prikey)
     syncInfo(newroot)
     newroot;
@@ -98,13 +97,58 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
             log.warn("unknow Error.", e)
         } finally {
           if (root() != null) {
-            MDCSetBCUID(root()._bcuid)
+            MDCSetBCUID(root().bcuid)
           }
         }
       }
     }
   }
-  def resetRoot(node: PNode): Unit = {
+  def initClusterNode(subnetRoot:Node) = {
+    this.synchronized {
+      initNode();
+      rootnode = ClusterNode(net_id = netid(),
+        cnode_idx = -1, _sign = "", 
+        pnodes = Array(subnetRoot),
+        _net_bcuid = rootnode.bcuid,
+        _try_cnode_idx = rootnode.try_node_idx);
+      if (rootnode == PNode.NoneNode) //second entry
+      {
+        try {
+          val nodeidx = PNode.genIdx()
+          val node_info = getFromDB(PROP_NODE_INFO, "");
+          rootnode =
+            try {
+              log.info("load node from db info=:" + node_info)
+              val r = if (StringUtils.isBlank(node_info)) {
+                newNode(PNode.genIdx());
+              } else {
+                deserialize(node_info)
+              }
+              log.info("load node from db:" + r.bcuid + ",idx=" + r.node_idx)
+              r
+            } catch {
+              case e: Throwable =>
+                val r = newNode(PNode.genIdx());
+                log.debug("new node info:" + r.bcuid + ",idx=" + r.node_idx)
+                r
+            }
+
+          if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
+            MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
+          }
+
+        } catch {
+          case e: Throwable =>
+            log.warn("unknow Error.", e)
+        } finally {
+          if (root() != null) {
+            MDCSetBCUID(root().bcuid)
+          }
+        }
+      }
+    }
+  }
+  def resetRoot(node: Node): Unit = {
     this.rootnode = node;
   }
   def changeNodeIdx(test_bits: BigInt = BigInt("0")): Int = {
@@ -117,21 +161,10 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
       Daos.odb.putInfo(NODE_ID_PROP, String.valueOf(v))
       rootnode = rootnode.changeIdx(v)
       syncInfo(rootnode)
-      MDCSetBCUID(root()._bcuid)
+      MDCSetBCUID(root().bcuid)
       log.debug("changeNode Index=" + v)
       v
     }
-  }
-
-  
-
-  def isLocal(bcuid: String): Boolean = {
-    StringUtils.equals(root().bcuid, bcuid);
-  }
-
-  def isLocal(node: PNode): Boolean = {
-    node == root() ||
-      StringUtils.equals(root().bcuid, node.bcuid);
   }
 
 }

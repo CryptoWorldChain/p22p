@@ -12,6 +12,8 @@ import org.fc.brewchain.p22p.core.MessageSender
 import onight.tfw.otransio.api.NonePackSender
 import onight.oapi.scala.traits.OLog
 import java.net.URL
+import onight.tfw.mservice.NodeHelper
+import org.fc.brewchain.p22p.node.ClusterNode
 
 @NActorProvider
 object Startup extends SessionModules[Message] {
@@ -44,11 +46,27 @@ class BackgroundLoader() extends Runnable with OLog {
 
     val networks = Daos.props.get("org.bc.pzp.networks", "raft").split(",").toList
     log.debug("networks:" + networks)
+    // for test..
+    // create two layer networks , [1,3,5,7] ==> [2,4,6,8]
+    // layer one , like raft
     networks.map { x =>
-      val net = new Network(x.trim(), Daos.props.get("org.bc.pzp.networks." + x.trim() + ".nodelist", "tcp://127.0.0.1:5100"));
+      val net = new Network(x.trim(), Daos.props.get("org.bc.pzp.networks." + x.trim() + ".nodelist",
+        "tcp://127.0.0.1:510" + NodeHelper.getCurrNodeListenOutPort % 2));
       Networks.netsByID.put(net.netid, net)
       net.initNode();
       net.startup()
     }
+
+    //layer two, like dpos
+    if (Daos.props.get("org.bc.pzp.networks.test", "0").equals("1") || Daos.props.get("org.bc.pzp.networks.test", "false").equals("true")) {
+      val net0 = Networks.networkByID("raft");
+      {
+        val net1 = new Network("dpos", "tcp://127.0.0.1:5100");
+        Networks.netsByID.put(net1.netid, net1)
+        net1.initClusterNode(net0.root());
+        net1.startup()
+      }
+    }
+
   }
 }

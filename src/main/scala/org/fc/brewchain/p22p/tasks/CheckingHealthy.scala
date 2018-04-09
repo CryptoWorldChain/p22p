@@ -33,13 +33,12 @@ case class CheckingHealthy(network: Network) extends SRunner {
   def getName() = "CheckingHealthy"
 
   def runOnce() = {
-    if (!StringUtils.isBlank(network.root().pub_key())) {
-
+    if (!StringUtils.isBlank(network.root().pub_key)) {
       val pack = PSNodeInfo.newBuilder().setNode(toPMNode(network.root()))
         .setNid(network.netid).build()
       implicit val _net = network
       network.pendingNodes.filter { _.bcuid != network.root().bcuid }.map { n =>
-        log.debug("checking Health to pending@" + n.bcuid + ",uri=" + n.uri())
+        log.debug("checking Health to pending@" + n.bcuid + ",uri=" + n.uri)
         MessageSender.sendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
           def onSuccess(fp: FramePacket) = {
             log.debug("send HBTPZP success:to " + n.uri + ",body=" + fp.getBody)
@@ -74,7 +73,7 @@ case class CheckingHealthy(network: Network) extends SRunner {
       }
       network.directNodes.filter { _.bcuid != network.root().bcuid }.map { n =>
 
-        log.debug("checking Health to directs@" + n.bcuid + ",uri=" + n.uri())
+        log.debug("checking Health to directs@" + n.bcuid + ",uri=" + n.uri)
         MessageSender.sendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
           def onSuccess(fp: FramePacket) = {
             log.debug("send HBTPZP Direct success:to " + n.uri + ",body=" + fp.getBody)

@@ -46,7 +46,7 @@ sealed trait Node {
 
 case class PNode(_name: String, _node_idx: Int, //node info
     _sign: String,
-    protocol: String = "", address: String = "", port: Int = 0, //
+    _uri: String = "", //
     _startup_time: Long = System.currentTimeMillis(), //
     _pub_key: String = "", //
     _counter: CCSet = CCSet(),
@@ -54,8 +54,8 @@ case class PNode(_name: String, _node_idx: Int, //node info
     _bcuid: String = UUIDGenerator.generate(),
     _pri_key: String = "") extends Node with OLog {
 
-  def uri(): String = protocol + "://" + address + ":" + port;
-  def uris(): Array[String] = Array(protocol + "://" + address + ":" + port);
+  def uri(): String = _uri
+  def uris(): Array[String] = Array(_uri);
 
   def name(): String = _name
   def node_idx(): Int = _node_idx;
@@ -68,8 +68,6 @@ case class PNode(_name: String, _node_idx: Int, //node info
   def try_node_idx(): Int = _try_node_idx
 
   override def processMessage(gcmd: String, body: Either[Message, ByteString])(implicit network: Network): Unit = {
-    //    counter.recv.incrementAndGet() 
-    log.debug("procMessage:@" + node_idx + ",bcuid=" + bcuid + ",gcmd:" + gcmd)
     MessageSender.postMessage(gcmd, body, this)
   }
 
@@ -79,7 +77,7 @@ case class PNode(_name: String, _node_idx: Int, //node info
 
   override def changeIdx(idx: Int): PNode = PNode.signNode(
     name, idx, //node info
-    protocol, address, port, //
+    uri, //
     startup_time, //
     pub_key, //
     counter,
@@ -91,7 +89,7 @@ case class PNode(_name: String, _node_idx: Int, //node info
 object PNode {
   def fromURL(url: String): PNode = {
     val u = new URL(url);
-    val n = new PNode(_name = u.getHost, _node_idx = 0, "", protocol = u.getProtocol, address = u.getHost, port = u.getPort,
+    val n = new PNode(_name = u.getHost, _node_idx = 0, "", _uri = u.toString(),
       _bcuid = Base64.encodeBase64URLSafeString(url.getBytes),
       _pub_key = "")
     n
@@ -100,7 +98,7 @@ object PNode {
   val NoneNode: PNode = PNode(_name = "", _node_idx = 0, _sign = "")
 
   def signNode(name: String, node_idx: Int, //node info
-    protocol: String = "", address: String = "", port: Int = 0, //
+    uri: String = "", //
     startup_time: Long = System.currentTimeMillis(), //
     pub_key: String = null, //
     counter: CCSet = CCSet(),
@@ -108,8 +106,8 @@ object PNode {
     bcuid: String = UUIDGenerator.generate(),
     pri_key: String = null): PNode = {
     if (pri_key != null) {
-      PNode(name, node_idx, EncHelper.ecSign(pri_key, Array(node_idx, protocol, address, port, bcuid).mkString("|").getBytes),
-        protocol, address, port, //
+      PNode(name, node_idx, EncHelper.ecSign(pri_key, Array(node_idx, uri, bcuid).mkString("|").getBytes),
+        uri, //
         startup_time, //
         pub_key, //
         counter,
@@ -118,7 +116,7 @@ object PNode {
         pri_key)
     } else {
       PNode(name, node_idx, null,
-        protocol, address, port, //
+        uri, //
         startup_time, //
         pub_key, //
         counter,
@@ -147,23 +145,20 @@ object PNode {
 }
 
 case class ClusterNode(net_id: String, cnode_idx: Int, //node info
-    _sign: String,
-    pnodes: Array[PNode],
+    _sign: String="",
+    pnodes: Array[Node],
     _counter: CCSet = CCSet(),
     _startup_time: Long = System.currentTimeMillis(),
     _try_cnode_idx: Int = 0,
     _net_bcuid: String,
-    _pub_key: String = null,
-    _pri_key: String = null,
-    protocol: String = "", address: String = "", port: Int = 0 //    
+    _pub_key: String = "",
+    _pri_key: String = "",
+    _uri :String = "" //    
     ) extends Node with OLog {
 
-  var masternode: PNode = pnodes(0);
+  var masternode: Node = pnodes(0);
 
   override def processMessage(gcmd: String, body: Either[Message, ByteString])(implicit network: Network): Unit = {
-    //    val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
-    //    MessageSender.postMessage(gcmd, body, this)
-    log.debug("procMessage:@" + node_idx + ",bcuid=" + bcuid + ",gcmd:" + gcmd)
     MessageSender.postMessage(gcmd, body, masternode)
   }
 
@@ -171,9 +166,9 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
     "ClusterNode(" + net_id + "," + startup_time + "," + cnode_idx + "," + sign + ")@" + this.hashCode()
   }
 
-  def uri(): String = pnodes(0).protocol + "://" + address + ":" + port;
+  def uri(): String = pnodes.foldLeft("")((A, n) => A + n.uri + ",");
   def uris(): Array[String] = {
-    pnodes.map { n => n.uri() }
+    pnodes.map { n => n.uri }
   }
 
   def name(): String = net_id
@@ -194,7 +189,7 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
     bcuid,
     pub_key,
     pri_key,
-    protocol, address, port //
+    uri() //
     )
 }
 

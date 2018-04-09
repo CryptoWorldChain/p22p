@@ -6,13 +6,13 @@ import onight.oapi.scala.traits.OLog
 import org.fc.brewchain.p22p.node.Network
 
 trait LogHelper extends OLog {
-  def getAbr(str: String) = StringUtils.abbreviateMiddle(str, "..", 8);
+  def getAbr(str: String) = StringUtils.abbreviateMiddle(str, ".", 10);
 //  def MDCSetBCUID(bcuid: String) = MDC.put("BCUID", getAbr(bcuid));
   
   def MDCSetBCUID(network:Network) = { 
     MDC.put("BCUID",getAbr(network.root().bcuid));
     System.setProperty("LOGROOT",network.root().bcuid);
-  }
+  } 
   
   def MDCSetBCUID(bcuid:String) = { 
     MDC.put("BCUID",getAbr(bcuid));

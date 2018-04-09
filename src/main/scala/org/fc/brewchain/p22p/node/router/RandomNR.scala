@@ -10,11 +10,12 @@ import org.fc.brewchain.p22p.node.Networks
 import onight.oapi.scala.traits.OLog
 import com.google.protobuf.Message
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.node.Node
 
 object RandomNR extends MessageRouter with OLog {
   def getRand() = Math.random(); //DHTConsRand.getRandFactor()
 
-  override def routeMessage(gcmd:String,body: Either[Message,ByteString])(implicit from: PNode, //
+  override def routeMessage(gcmd:String,body: Either[Message,ByteString])(implicit from: Node, //
     nextHops: IntNode = FullNodeSet(),
     network: Network,messageid:String) {
     //    log.debug("routeMessage:from=" + from.node_idx + ",next=" + nextHops)
@@ -24,7 +25,7 @@ object RandomNR extends MessageRouter with OLog {
         val (directCount, eachsetCount) = getDiv(nextHopsCount);
         //        var ran = ((getRand() * nextHopsCount) % directCount).asInstanceOf[Int];
         val mapSets = scala.collection.mutable.Map.empty[Int, BigInt]; //leader==>follow
-        val startNodeSets = Set.empty[(Int, PNode)]; //leader==>follow
+        val startNodeSets = Set.empty[(Int, Node)]; //leader==>follow
         val offset = (getRand() * nextHopsCount).asInstanceOf[Int];
         var i: Int = offset;
         //        log.debug("nextHopsCount==" + nextHopsCount + ",directCount=" + directCount + ",eachsetCount=" + eachsetCount)

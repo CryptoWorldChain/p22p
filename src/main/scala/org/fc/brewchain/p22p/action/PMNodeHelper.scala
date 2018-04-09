@@ -12,6 +12,7 @@ import com.google.protobuf.MessageOrBuilder
 import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.Networks
+import org.fc.brewchain.p22p.node.Node
 
 trait PMNodeHelper {
 
@@ -19,18 +20,18 @@ trait PMNodeHelper {
     Networks.networkByID(nid);
   }
 
-  def toPMNode(n: PNode): PMNodeInfo.Builder = {
-    PMNodeInfo.newBuilder().setAddress(n.address).setNodeName(n.name).setPort(n.port)
-      .setProtocol(n.protocol)
+  def toPMNode(n: Node): PMNodeInfo.Builder = {
+    PMNodeInfo.newBuilder()
+      .setUri(n.uri)
+      .setNodeName(n.name)
       .setNodeIdx(n.node_idx)
       .setSign(n.sign)
       .setPubKey(n.pub_key).setStartupTime(n.startup_time).setTryNodeIdx(n.try_node_idx).setBcuid(n.bcuid)
       .setSendCc(n.counter.send.get).setRecvCc(n.counter.recv.get).setBlockCc(n.counter.blocks.get)
   }
 
-  def toFullPMNode(n: PNode): PMNodeInfo.Builder = {
-    PMNodeInfo.newBuilder().setAddress(n.address).setNodeName(n.name).setPort(n.port)
-      .setProtocol(n.protocol)
+  def toFullPMNode(n: Node): PMNodeInfo.Builder = {
+    PMNodeInfo.newBuilder().setUri(n.uri).setNodeName(n.name)
       .setSign(n.sign)
       .setPubKey(n.pub_key).setStartupTime(n.startup_time).setTryNodeIdx(n.try_node_idx).setBcuid(n.bcuid)
       .setPriKey(n.pri_key).setNodeIdx(n.node_idx)
@@ -38,7 +39,7 @@ trait PMNodeHelper {
   }
   val pser = SerializerFactory.getSerializer(SerializerFactory.SERIALIZER_PROTOBUF)
 
-  def serialize(n: PNode): String = {
+  def serialize(n: Node): String = {
     Base64.encodeBase64String(toBytes(toFullPMNode(n)))
   }
 
@@ -50,7 +51,7 @@ trait PMNodeHelper {
     PNode(
       _name = pm.getNodeName, _node_idx = pm.getNodeIdx, //node info
       _sign = pm.getSign,
-      protocol = pm.getProtocol, address = pm.getAddress, port = pm.getPort, //
+      _uri = pm.getUri, //
       _startup_time = pm.getStartupTime, //
       _pub_key = pm.getPubKey, //
       _counter = new CCSet(pm.getRecvCc, pm.getSendCc, pm.getBlockCc),
