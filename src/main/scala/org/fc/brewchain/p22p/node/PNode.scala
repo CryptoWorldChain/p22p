@@ -22,10 +22,10 @@ import java.net.URL
 import onight.tfw.outils.serialize.UUIDGenerator
 import onight.tfw.outils.conf.PropHelper
 import org.apache.commons.codec.binary.Base64
-import org.fc.brewchain.bcapi.crypto.EncHelper
 import org.fc.brewchain.p22p.core.MessageSender
 import scala.util.Either
 import com.google.protobuf.ByteString
+import org.fc.brewchain.p22p.Daos
 
 sealed trait Node {
   def processMessage(gcmd: String, body: Either[Message, ByteString])(implicit network: Network): Unit
@@ -106,7 +106,7 @@ object PNode {
     bcuid: String = UUIDGenerator.generate(),
     pri_key: String = null): PNode = {
     if (pri_key != null) {
-      PNode(name, node_idx, EncHelper.ecSign(pri_key, Array(node_idx, uri, bcuid).mkString("|").getBytes),
+      PNode(name, node_idx, Daos.enc.ecSignHex(pri_key, Array(node_idx, uri, bcuid).mkString("|").getBytes),
         uri, //
         startup_time, //
         pub_key, //

@@ -19,7 +19,7 @@ import org.fc.brewchain.bcapi.crypto.BitMap
 import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.p22p.node.Network
 
-object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
+object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap{
   def makeDecision(network: Network,pbo: PVBase, reallist: List[OPair]): Option[String] = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
     log.debug("makeDecision NodeBits:F=" + pbo.getFromBcuid + ",R=" + vb.getNodeBitsEnc + ",S=" + pbo.getState
@@ -27,8 +27,8 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
     if (pbo.getRejectState == PBFTStage.REJECT) {
       None;
     } else {
-      val encbits = BitMap.mapToBigInt(vb.getNodeBitsEnc);
-      val pendingbits = BitMap.mapToBigInt(vb.getPendingBitsEnc);
+      val encbits = mapToBigInt(vb.getNodeBitsEnc);
+      val pendingbits = mapToBigInt(vb.getPendingBitsEnc);
       val oldtotalbits = encbits.+(pendingbits);
       var totalbits = encbits.+(pendingbits);
 
@@ -69,7 +69,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper {
       fromPMNode(n)
     }.toList
 
-    val encbits = BitMap.mapToBigInt(vb.getNodeBitsEnc);
+    val encbits = mapToBigInt(vb.getNodeBitsEnc);
     val hasBitExistsInMypending = network.pendingNodes.map { n =>
       if (encbits.testBit(n.try_node_idx)) {
         network.addDNode(n);

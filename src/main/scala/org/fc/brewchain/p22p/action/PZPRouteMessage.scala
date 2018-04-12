@@ -3,7 +3,6 @@ package org.fc.brewchain.p22p.action
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import org.fc.brewchain.bcapi.crypto.EncHelper
 import lombok.extern.slf4j.Slf4j
 import onight.oapi.scala.commons.LService
 import onight.oapi.scala.commons.PBUtils
@@ -65,7 +64,7 @@ object PZPRouteMessage extends PSMPZP[PSRouteMessage] {
 //
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPRouteMessageService extends OLog with PBUtils with LService[PSRouteMessage] with PMNodeHelper with LogHelper
-    with NodeSetHelper {
+    with NodeSetHelper with BitMap {
 
   var cdl = new CountDownLatch(0)
 
@@ -96,7 +95,7 @@ object PZPRouteMessageService extends OLog with PBUtils with LService[PSRouteMes
         } else {
           log.warn("bit end not equals message gcmd=:" + pbo.getGcmd + ",netenc=" + strencbits
             + ",pboenc=" + pbo.getEncbits + ",body=");
-          val bits = BitMap.mapToBigInt(pbo.getEncbits)
+          val bits = mapToBigInt(pbo.getEncbits)
           net.bwallMessage(pbo.getGcmd,  bodybb, bits)
           //                BitMap.hexToMapping(pbo.get))
         }

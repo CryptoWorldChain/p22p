@@ -16,8 +16,10 @@ import onight.tfw.mservice.NodeHelper
 import org.fc.brewchain.p22p.node.ClusterNode
 
 @NActorProvider
-object Startup extends SessionModules[Message] {
+object Startup extends PSMPZP[Message] {
 
+  override def getCmds: Array[String] = Array("SSS");
+  
   @Validate
   def init() {
 
@@ -40,7 +42,7 @@ class BackgroundLoader() extends Runnable with OLog {
   def run() = {
     URLHelper.init();
     while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]) {
-      log.debug("Daos Or sockSender Not Ready..")
+      log.debug("Daos Or sockSender Not Ready..:enc="+Daos.enc)
       Thread.sleep(1000);
     }
 

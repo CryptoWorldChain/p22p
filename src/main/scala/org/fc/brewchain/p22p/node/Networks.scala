@@ -29,9 +29,11 @@ import scala.collection.JavaConversions._
 import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.node.router.FullNodeSet
 import org.fc.brewchain.p22p.node.router.IntNode
+import onight.osgi.annotation.NActorProvider
+import onight.tfw.ntrans.api.NActor
 
-case class BitEnc(bits: BigInt) {
-  val strEnc: String = BitMap.hexToMapping(bits);
+case class BitEnc(bits: BigInt) extends BitMap {
+  val strEnc: String = hexToMapping(bits);
 }
 case class Network(netid: String, nodelist: String) extends OLog with LocalNode //
 {
@@ -223,12 +225,16 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
     Scheduler.scheduleWithFixedDelay(VoteWorker(this, voteQueue), 10, Config.TICK_VOTE_WORKER, TimeUnit.SECONDS)
   }
 }
-object Networks extends LogHelper {
+
+object Networks extends NActor with LogHelper {
   //  val raft: Network = new Network("raft","tcp://127.0.0.1:5100");
   val netsByID = new HashMap[String, Network]();
+  
   def networkByID(netid: String): Network = {
     netsByID.get(netid);
   }
+  
+  
 }
 
 

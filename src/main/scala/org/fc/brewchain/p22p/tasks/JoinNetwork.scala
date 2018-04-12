@@ -58,7 +58,7 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner with 
           if (!network.root.equals(n)) {
             val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()))
             .setNid(network.netid);
-            log.debug("JoinNetwork :Start to Connect---:" + n.uri);
+            log.debug("JoinNetwork :Start to Connect---:" + n.uri+",Joinbody="+joinbody.build());
             MessageSender.sendMessage("JINPZP", joinbody.build(), n, new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
                 log.debug("send JINPZP success:to " + n.uri + ",body=" + fp.getBody)

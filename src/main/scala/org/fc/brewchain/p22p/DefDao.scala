@@ -20,6 +20,7 @@ import org.brewchain.bcapi.backend.ODBSupport
 import org.brewchain.bcapi.backend.ODBDao
 import onight.tfw.ojpa.api.StoreServiceProvider
 import onight.tfw.ntrans.api.ActorService
+import org.fc.brewchain.bcapi.EncAPI
 
 abstract class PSMPZP[T <: Message] extends SessionModules[T] with PBUtils with OLog {
   override def getModule: String = PModule.PZP.name()
@@ -41,6 +42,10 @@ object Daos extends PSMPZP[Message] with ActorService {
   @BeanProperty
   var bdbprovider: StoreServiceProvider = null;
 
+  @ActorRequire(name = "bc_encoder",scope = "global")
+  @BeanProperty
+  var enc: EncAPI = null;
+
   def setOdb(daodb: DomainDaoSupport) {
     if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
       odb = daodb.asInstanceOf[ODBSupport];
@@ -58,7 +63,7 @@ object Daos extends PSMPZP[Message] with ActorService {
   def isDbReady(): Boolean = {
     return odb != null && odb.getDaosupport.isInstanceOf[ODBSupport] &&
       viewstateDB != null && viewstateDB.getDaosupport.isInstanceOf[ODBSupport] &&
-      bdbprovider != null;
+      bdbprovider != null && enc!=null;
   }
 
   @BeanProperty

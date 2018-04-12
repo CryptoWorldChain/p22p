@@ -29,7 +29,7 @@ import org.fc.brewchain.p22p.pbft.VoteQueue
 import org.fc.brewchain.p22p.node.Network
 
 //投票决定当前的节点
-case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner {
+case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner with BitMap {
   def getName() = "VoteNodeMap"
   def runOnce() = {
     log.debug("VoteNodeMap :Run----Try to Vote Node Maps");
@@ -70,7 +70,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner {
           } //          }
           )
 
-        vbody.setPendingBitsEnc(BitMap.hexToMapping(pendingbits))
+        vbody.setPendingBitsEnc(hexToMapping(pendingbits))
         vbody.setNodeBitsEnc(network.node_strBits)
         vbase.setContents(toByteSting(vbody))
         //      vbase.addVoteContents(Any.pack(vbody.build()))
@@ -106,9 +106,9 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner {
     }
   }
   //Scheduler.scheduleWithFixedDelay(new Runnable, initialDelay, delay, unit)
-  def main(args: Array[String]): Unit = {
-    URLHelper.init()
-    //System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
-    println(new URL("tcp://127.0.0.1:5100").getHost);
-  }
+//  def main(args: Array[String]): Unit = {
+//    URLHelper.init()
+//    //System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
+//    println(new URL("tcp://127.0.0.1:5100").getHost);
+//  }
 }

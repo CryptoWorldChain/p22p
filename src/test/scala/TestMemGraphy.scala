@@ -18,8 +18,7 @@ import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.node.router.CircleNR
 import com.google.protobuf.StringValue
 
-object TestMemGraphy extends OLog {
-
+object TestMemGraphy extends OLog  with BitMap{
   def main(args: Array[String]): Unit = {
     val nodeCount = 10;
     val nodes = new ListBuffer[PNode]();
@@ -35,7 +34,7 @@ object TestMemGraphy extends OLog {
       bitenc = bitenc.setBit(i*2);
       networks.append(new Network("test:"+i,""))
     }
-    println("bitenc=" + bitenc.toString(2) + "==>" + BitMap.hexToMapping(bitenc)
+    println("bitenc=" + bitenc.toString(2) + "==>" + hexToMapping(bitenc)
         +",size=="+nodes.size)
     
     networks.map { net =>
@@ -101,7 +100,7 @@ object TestMemGraphy extends OLog {
 
     val node_bits1 = node_bits.setBit(100).setBit(1).setBit(12).setBit(0);
 
-    println(node_bits1.toString(16) + "==>" + node_bits1.testBit(100) + "==>" + BitMap.hexToMapping(node_bits1));
+    println(node_bits1.toString(16) + "==>" + node_bits1.testBit(100) + "==>" + hexToMapping(node_bits1));
     println(node_bits1.bitCount() + "," + node_bits1.bitLength());
 
   }

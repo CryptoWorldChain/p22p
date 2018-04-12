@@ -1,8 +1,6 @@
 package org.fc.brewchain.p22p.node
 
 import onight.tfw.mservice.NodeHelper
-import org.fc.brewchain.bcapi.crypto.KeyPair
-import org.fc.brewchain.bcapi.crypto.EncHelper
 import org.apache.commons.lang3.StringUtils
 //import org.spongycastle.util.encoders.Hex
 //import org.ethereum.crypto.HashUtil
@@ -54,13 +52,13 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
     true
   }
   def newNode(nodeidx: Int = -1): PNode = {
-    val kp = EncHelper.newKeyPair()
+    val kp = Daos.enc.genKeys()
     val newroot = PNode.signNode(NodeHelper.getCurrNodeName, node_idx = -1,
       uri = "tcp://" + NodeHelper.getCurrNodeListenOutAddr + ":" + NodeHelper.getCurrNodeListenOutPort,
-      System.currentTimeMillis(), pub_key = kp.pubkey,
+      System.currentTimeMillis(), pub_key = kp.getPubkey,
       try_node_idx = nodeidx,
-      bcuid = netid().head.toUpper+kp.bcuid,
-      pri_key = kp.prikey)
+      bcuid = netid().head.toUpper+kp.getBcuid,
+      pri_key = kp.getPrikey)
     syncInfo(newroot)
     newroot;
   }

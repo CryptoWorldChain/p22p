@@ -11,3 +11,4 @@ rolling/
 conf/startup.properties
 odb.*
 logs
+.cache*

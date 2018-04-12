@@ -24,7 +24,7 @@ object TestNodeConverge extends OLog {
   def main(args: Array[String]): Unit = {
     val nodeCount = 10;
     val nodes = new ListBuffer[PNode]();
-    val networks = new ListBuffer[Network]();
+    val networks = new ListBuffer[Network]() ;
     val nodesMap = new HashMap[String, PNode]();
     var bitenc = BigInt(0)
     for (i <- 0 to nodeCount - 1) {

@@ -3,7 +3,6 @@ package org.fc.brewchain.p22p.action
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
-import org.fc.brewchain.bcapi.crypto.EncHelper
 import lombok.extern.slf4j.Slf4j
 import onight.oapi.scala.commons.LService
 import onight.oapi.scala.commons.PBUtils
