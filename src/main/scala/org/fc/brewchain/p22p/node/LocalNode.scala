@@ -58,7 +58,9 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
       System.currentTimeMillis(), pub_key = kp.getPubkey,
       try_node_idx = nodeidx,
       bcuid = netid().head.toUpper+kp.getBcuid,
-      pri_key = kp.getPrikey)
+      pri_key = kp.getPrikey,
+      v_address = kp.getAddress  
+    )
     syncInfo(newroot)
     newroot;
   }

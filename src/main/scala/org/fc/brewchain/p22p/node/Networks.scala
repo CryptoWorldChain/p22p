@@ -31,6 +31,7 @@ import org.fc.brewchain.p22p.node.router.FullNodeSet
 import org.fc.brewchain.p22p.node.router.IntNode
 import onight.osgi.annotation.NActorProvider
 import onight.tfw.ntrans.api.NActor
+import onight.tfw.async.CallBack
 
 case class BitEnc(bits: BigInt) extends BitMap {
   val strEnc: String = hexToMapping(bits);
@@ -171,6 +172,11 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
         MessageSender.postMessage(gcmd, body, n)(this)
       })
+  }
+  
+  
+  def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket]): Unit = {
+    MessageSender.sendMessage(gcmd, body, node, cb)(this)
   }
 
   def bwallMessage(gcmd: String, body: Either[Message, ByteString], bits: BigInt, messageId: String = ""): Unit = {

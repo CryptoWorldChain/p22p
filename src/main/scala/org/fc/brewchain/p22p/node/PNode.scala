@@ -35,6 +35,7 @@ sealed trait Node {
   def bcuid: String;
   def pub_key: String;
   def pri_key: String;
+  def v_address: String;
   def counter: CCSet;
   def startup_time: Long;
   def sign: String;
@@ -52,7 +53,8 @@ case class PNode(_name: String, _node_idx: Int, //node info
     _counter: CCSet = CCSet(),
     _try_node_idx: Int = 0,
     _bcuid: String = UUIDGenerator.generate(),
-    _pri_key: String = "") extends Node with OLog {
+    _pri_key: String = "",
+    _v_address:String = "") extends Node with OLog {
 
   def uri(): String = _uri
   def uris(): Array[String] = Array(_uri);
@@ -62,6 +64,7 @@ case class PNode(_name: String, _node_idx: Int, //node info
   def bcuid(): String = _bcuid;
   def pub_key(): String = _pub_key;
   def pri_key(): String = _pri_key
+  def v_address():String = _v_address;
   def counter(): CCSet = _counter
   def startup_time(): Long = _startup_time
   def sign(): String = _sign
@@ -83,7 +86,9 @@ case class PNode(_name: String, _node_idx: Int, //node info
     counter,
     try_node_idx,
     bcuid,
-    pri_key)
+    pri_key,
+    v_address  
+  )
 }
 
 object PNode {
@@ -104,7 +109,9 @@ object PNode {
     counter: CCSet = CCSet(),
     try_node_idx: Int = 0,
     bcuid: String = UUIDGenerator.generate(),
-    pri_key: String = null): PNode = {
+    pri_key: String = null,
+    v_address:String  
+  ): PNode = {
     if (pri_key != null) {
       PNode(name, node_idx, Daos.enc.ecSignHex(pri_key, Array(node_idx, uri, bcuid).mkString("|").getBytes),
         uri, //
@@ -113,7 +120,7 @@ object PNode {
         counter,
         try_node_idx,
         bcuid,
-        pri_key)
+        pri_key,v_address)
     } else {
       PNode(name, node_idx, null,
         uri, //
@@ -122,7 +129,7 @@ object PNode {
         counter,
         try_node_idx,
         bcuid,
-        pri_key)
+        pri_key,v_address)
     }
   }
 
@@ -145,7 +152,7 @@ object PNode {
 }
 
 case class ClusterNode(net_id: String, cnode_idx: Int, //node info
-    _sign: String="",
+    _sign: String = "",
     pnodes: Array[Node],
     _counter: CCSet = CCSet(),
     _startup_time: Long = System.currentTimeMillis(),
@@ -153,7 +160,8 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
     _net_bcuid: String,
     _pub_key: String = "",
     _pri_key: String = "",
-    _uri :String = "" //    
+    _v_address:String = "",
+    _uri: String = "" //    
     ) extends Node with OLog {
 
   var masternode: Node = pnodes(0);
@@ -179,6 +187,7 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
   def counter(): CCSet = _counter
   def startup_time(): Long = _startup_time
   def sign(): String = _sign
+  def v_address():String = _v_address;
   def try_node_idx(): Int = _try_cnode_idx
 
   override def changeIdx(idx: Int): Node = ClusterNode(

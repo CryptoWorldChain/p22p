@@ -25,16 +25,17 @@ import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.node.Node
 import org.fc.brewchain.p22p.PSMPZP
 import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.ntrans.api.ActorService
 
 @NActorProvider
 @Instantiate(name = "pzpctrl")
+@Provides(specifications = Array(classOf[ActorService]), strategy = "SINGLETON")
 class PZPCtrl extends PSMPZP[Message] with OLog {
 
   def networkByID(netid: String): Network = {
     Networks.networkByID(netid);
   }
-  
-  
   
   override def getCmds: Array[String] = Array("CTL");
   

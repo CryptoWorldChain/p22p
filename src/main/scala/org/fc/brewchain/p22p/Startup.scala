@@ -25,7 +25,7 @@ object Startup extends PSMPZP[Message] {
 
     //    System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.url");
     log.info("startup:");
-    new Thread(new BackgroundLoader()).start()
+    new Thread(new PZPBGLoader()).start()
 
     log.debug("bdb_prodiver==" + Daos.bdbprovider);
     log.info("tasks inited....[OK]");
@@ -38,7 +38,7 @@ object Startup extends PSMPZP[Message] {
 
 }
 
-class BackgroundLoader() extends Runnable with OLog {
+class PZPBGLoader() extends Runnable with OLog {
   def run() = {
     URLHelper.init();
     while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]) {
@@ -48,6 +48,7 @@ class BackgroundLoader() extends Runnable with OLog {
 
     val networks = Daos.props.get("org.bc.pzp.networks", "raft").split(",").toList
     log.debug("networks:" + networks)
+    log.debug("enc:" + Daos.enc)
     // for test..
     // create two layer networks , [1,3,5,7] ==> [2,4,6,8]
     // layer one , like raft
