@@ -29,9 +29,9 @@ import java.util.concurrent.ConcurrentHashMap
 import org.fc.brewchain.p22p.node.Network
 import sun.rmi.log.LogHandler
 import org.fc.brewchain.p22p.utils.LogHelper
- 
+
 //投票决定当前的节点
-case class JoinNetwork(network:Network,statupNodes:String) extends SRunner with LogHelper {
+case class JoinNetwork(network: Network, statupNodes: String) extends SRunner with LogHelper {
   def getName() = "JoinNetwork"
   val sameNodes = new HashMap[Integer, PNode]();
   val pendingJoinNodes = new ConcurrentHashMap[String, PNode]();
@@ -57,8 +57,8 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner with 
           log.debug("JoinNetwork :Run----Try to Join :MainNet=" + n.uri + ",cur=" + network.root.uri);
           if (!network.root.equals(n)) {
             val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()))
-            .setNid(network.netid);
-            log.debug("JoinNetwork :Start to Connect---:" + n.uri+",Joinbody="+joinbody.build());
+              .setNid(network.netid);
+            log.debug("JoinNetwork :Start to Connect---:" + n.uri + ",Joinbody=" + joinbody.build());
             MessageSender.sendMessage("JINPZP", joinbody.build(), n, new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
                 log.debug("send JINPZP success:to " + n.uri + ",body=" + fp.getBody)
@@ -66,12 +66,16 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner with 
                 if (retjoin.getRetCode() == -1) { //same message
                   log.debug("get Same Node:" + n.getName);
                   sameNodes.put(n.uri.hashCode(), n);
-                  duplictedInfoNodes.+=(n.uri.hashCode() -> n);
+                  //duplictedInfoNodes.+=(n.uri.hashCode() -> n);
                   MessageSender.dropNode(n)
                   val newN = fromPMNode(retjoin.getMyInfo)
                   MessageSender.changeNodeName(n.bcuid, newN.bcuid);
                   network.onlineMap.put(newN.bcuid(), newN)
                   network.addPendingNode(newN);
+                } else if (retjoin.getRetCode() == -2) {
+                  log.debug("get duplex NodeIndex:" + n.getName);
+                  duplictedInfoNodes.+=(n.uri.hashCode() -> n);
+                  
                 } else if (retjoin.getRetCode() == 0) {
                   joinedNodes.put(n.uri.hashCode(), n);
                   val newN = fromPMNode(retjoin.getMyInfo)
@@ -79,8 +83,7 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner with 
                   network.addPendingNode(newN);
                   retjoin.getNodesList.map { node =>
                     val pnode = fromPMNode(node);
-                    if(network.addPendingNode(pnode))
-                    {
+                    if (network.addPendingNode(pnode)) {
                       pendingJoinNodes.put(node.getBcuid, pnode);
                     }
                     //
@@ -98,13 +101,18 @@ case class JoinNetwork(network:Network,statupNodes:String) extends SRunner with 
         }
         if (namedNodes.size == 0) {
           log.debug("cannot reach more nodes. try from begining");
-          if (duplictedInfoNodes.size > 0 && !network.directNodeByBcuid.contains(network.root().bcuid)) {
+          if (duplictedInfoNodes.size > network.pendingNodes.size / 3 && !network.directNodeByBcuid.contains(network.root().bcuid)) {
             //            val nl = duplictedInfoNodes.values.toSeq.PBFTVote { x => Some(x.node_idx) }
             //            nl.decision match {
             //              case Some(v: BigInteger) =>
-            log.debug("duplictedInfoNodes ,change My Index:");
+            log.debug("duplictedInfoNodes ,change My Index:" + duplictedInfoNodes.size);
             network.removePendingNode(network.root())
+
             network.changeNodeIdx(duplictedInfoNodes.head._2.node_idx);
+            //drop all connection first
+            pendingJoinNodes.clear()
+            joinedNodes.clear();
+            sameNodes.clear();
             //              case _ => {
             //                log.debug("cannot get Converage :" + nl);
             //network.changeNodeIdx();

@@ -173,8 +173,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         MessageSender.postMessage(gcmd, body, n)(this)
       })
   }
-  
-  
+
   def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket]): Unit = {
     MessageSender.sendMessage(gcmd, body, node, cb)(this)
   }
@@ -204,6 +203,22 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         MessageSender.postMessage(gcmd, body, n)(this)
       })
   }
+  def postMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "", toN: String): Unit = {
+    directNodeByBcuid.get(toN) match {
+      case Some(n) =>
+        MessageSender.postMessage(gcmd, body, n)(this)
+      case None =>
+        log.debug("cannot Found Result from direct nodes,try pending");
+        pendingNodeByBcuid.get(toN) match {
+          case Some(n) =>
+            MessageSender.postMessage(gcmd, body, n)(this)
+          case None =>
+            log.debug("cannot Found Result from pending nodes");
+        }
+    }
+
+  }
+
   def wallOutsideMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
     directNodes.map { n =>
       if (!isLocalNode(n)) {
@@ -235,12 +250,11 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
 object Networks extends NActor with LogHelper {
   //  val raft: Network = new Network("raft","tcp://127.0.0.1:5100");
   val netsByID = new HashMap[String, Network]();
-  
+
   def networkByID(netid: String): Network = {
     netsByID.get(netid);
   }
-  
-  
+
 }
 
 

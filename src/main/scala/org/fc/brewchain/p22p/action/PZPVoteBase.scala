@@ -56,9 +56,6 @@ object PZPVoteBaseService extends LogHelper with PBUtils with LService[PVBase] w
   override def onPBPacket(pack: FramePacket, pbo: PVBase, handler: CompleteHandler) = {
     MDCSetMessageID(pbo.getMTypeValue + "|" + pbo.getMessageUid)
 
-    log.debug("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
-      + ",Rejct=" + pbo.getRejectState)
-
     var ret = PRetJoin.newBuilder();
     try {
       val network = networkByID(pbo.getNid)
@@ -67,7 +64,9 @@ object PZPVoteBaseService extends LogHelper with PBUtils with LService[PVBase] w
         handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
       } else {
         MDCSetBCUID(network)
-        
+        log.debug("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
+          + ",Rejct=" + pbo.getRejectState + ",from=" + pbo.getFromBcuid)
+
         pbo.getMType match {
           case PVType.NETWORK_IDX | PVType.VIEW_CHANGE =>
             network.voteQueue.appendInQ(pbo)

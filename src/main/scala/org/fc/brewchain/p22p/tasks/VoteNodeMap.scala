@@ -45,8 +45,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
       var pendingbits = BigInt(1)
       //init. start to vote.
       if (network.joinNetwork.pendingJoinNodes.size() / 2 > network.onlineMap.size
-        || network.onlineMap.size <= 0 
-        ) {
+        || network.onlineMap.size <= 0) {
         log.info("cannot vote for pendingJoinNodes Size bigger than online half:PendJoin=" +
           network.joinNetwork.pendingJoinNodes.size() + ": Online=" + network.onlineMap.size)
         //for fast load
@@ -79,12 +78,15 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
         log.info("vote -- Nodes:" + vbody.getNodeBitsEnc + ",pendings=" + vbody.getPendingBitsEnc);
         vbase.setV(vbase.getV);
         vbase.setN(network.pendingNodes.size + network.directNodes.size);
-
-        log.info("broadcast Vote Message:V=" + vbase.getV + ",N=" + vbase.getN + ",from=" + vbase.getFromBcuid
-          + ",SN=" + vbase.getStoreNum + ",VC=" + vbase.getViewCounter + ",messageid=" + vbase.getMessageUid)
-        val vbuild = vbase.build();
-        //        Networks.wallMessage("VOTPZP", vbuild);
-        voteQueue.appendInQ(vbase.setState(PBFTStage.PENDING_SEND).build())
+        if (vbase.getN > 0) {
+          log.info("broadcast Vote Message:V=" + vbase.getV + ",N=" + vbase.getN + ",from=" + vbase.getFromBcuid
+            + ",SN=" + vbase.getStoreNum + ",VC=" + vbase.getViewCounter + ",messageid=" + vbase.getMessageUid)
+          val vbuild = vbase.build();
+          //        Networks.wallMessage("VOTPZP", vbuild);
+          voteQueue.appendInQ(vbase.setState(PBFTStage.PENDING_SEND).build())
+        }else{
+          log.debug("cannot start Vote N=0:")
+        }
       }
       //      }
       //    NodeInstance.forwardMessage("VOTPZP", vbody.build());
@@ -106,9 +108,9 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
     }
   }
   //Scheduler.scheduleWithFixedDelay(new Runnable, initialDelay, delay, unit)
-//  def main(args: Array[String]): Unit = {
-//    URLHelper.init()
-//    //System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
-//    println(new URL("tcp://127.0.0.1:5100").getHost);
-//  }
+  //  def main(args: Array[String]): Unit = {
+  //    URLHelper.init()
+  //    //System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
+  //    println(new URL("tcp://127.0.0.1:5100").getHost);
+  //  }
 }

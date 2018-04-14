@@ -60,6 +60,7 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
           if ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == network.root().node_idx) ||
             StringUtils.equals(from.getBcuid, network.root().bcuid)) {
             log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid);
+            ret.setRetCode(-1)
             throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
           } else if (network.node_bits.testBit(from.getTryNodeIdx)) {
             network.nodeByIdx(from.getTryNodeIdx) match {
@@ -67,6 +68,7 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
                 log.debug("node backon line ")
                 network.onlineMap.put(n.bcuid, n);
               case _ =>
+                ret.setRetCode(-2)
                 log.info("nodebits duplicated NodeIdx :" + from.getNodeIdx);
                 throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
             }
@@ -102,10 +104,8 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         }
       } catch {
         case fe: NodeInfoDuplicated => {
-          ret.clear();
           ret.setMyInfo(toPMNode(network.root))
           ret.addNodes(toPMNode(network.root));
-          ret.setRetCode(-1).setRetMessage(fe.getMessage)
         }
         case e: FBSException => {
           ret.clear()
