@@ -29,10 +29,18 @@ import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import org.fc.brewchain.p22p.node.Networks
 import org.fc.brewchain.bcapi.crypto.BitMap
 import org.fc.brewchain.p22p.utils.LogHelper
+import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.ntrans.api.ActorService
+import onight.tfw.proxy.IActor
+import onight.tfw.otransio.api.session.CMDService
 
 @NActorProvider
 @Slf4j
-object PZPNodeInfo extends PSMPZP[PSNodeInfo] {
+@Instantiate
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor],classOf[CMDService]
+) )
+class PZPNodeInfo extends PSMPZP[PSNodeInfo] {
   override def service = PZPNodeInfoService
 }
 

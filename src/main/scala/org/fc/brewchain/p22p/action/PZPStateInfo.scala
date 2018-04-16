@@ -37,9 +37,18 @@ import org.fc.brewchain.p22p.pbgens.P22P.PRetVoteState
 import org.fc.brewchain.p22p.pbgens.P22P.NodeStateInfo
 import org.fc.brewchain.p22p.utils.LogHelper
 
+import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.ntrans.api.ActorService
+import onight.tfw.proxy.IActor
+import onight.tfw.otransio.api.session.CMDService
+
 @NActorProvider
 @Slf4j
-object PZPStateInfo extends PSMPZP[PSVoteState] {
+@Instantiate
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor],classOf[CMDService]
+) )
+class PZPStateInfo extends PSMPZP[PSVoteState] {
   override def service = PZPStateInfoService
 }
 

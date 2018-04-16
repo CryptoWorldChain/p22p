@@ -31,10 +31,18 @@ import org.fc.brewchain.p22p.node.Networks
 import org.brewchain.bcapi.utils.PacketIMHelper._
 import org.fc.brewchain.p22p.utils.LogHelper
 import org.fc.brewchain.bcapi.crypto.BitMap
+import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.ntrans.api.ActorService
+import onight.tfw.proxy.IActor
+import onight.tfw.otransio.api.session.CMDService
 
 @NActorProvider
 @Slf4j
-object PZPHeatBeat extends PSMPZP[PSNodeInfo] {
+@Instantiate
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor],classOf[CMDService]
+) )
+class PZPHeatBeat extends PSMPZP[PSNodeInfo] {
   override def service = PZPHeatBeatService
 }
 

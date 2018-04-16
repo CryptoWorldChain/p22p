@@ -55,9 +55,18 @@ import org.fc.brewchain.p22p.pbgens.P22P.PSRouteMessage.PBNode
 import com.google.protobuf.Message
 import org.fc.brewchain.p22p.pbgens.P22P.PSRouteMessage.PBRouteMsgType
 
+import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.ntrans.api.ActorService
+import onight.tfw.proxy.IActor
+import onight.tfw.otransio.api.session.CMDService
+
 @NActorProvider
 @Slf4j
-object PZPRouteMessage extends PSMPZP[PSRouteMessage] {
+@Instantiate
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor],classOf[CMDService]
+) )
+class PZPRouteMessage extends PSMPZP[PSRouteMessage] {
   override def service = PZPRouteMessageService
 }
 

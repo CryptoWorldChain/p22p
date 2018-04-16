@@ -44,9 +44,17 @@ import org.fc.brewchain.p22p.pbft.VoteQueue
 import org.fc.brewchain.p22p.pbft.DMVotingNodeBits
 import org.fc.brewchain.p22p.pbft.DMViewChange
 
+import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.ntrans.api.ActorService
+import onight.tfw.proxy.IActor
+import onight.tfw.otransio.api.session.CMDService
+
 @NActorProvider
 @Slf4j
-object PZPVoteBase extends PSMPZP[PVBase] {
+@Instantiate
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor], classOf[CMDService]))
+class PZPVoteBase extends PSMPZP[PVBase] {
   override def service = PZPVoteBaseService
 }
 
@@ -65,7 +73,7 @@ object PZPVoteBaseService extends LogHelper with PBUtils with LService[PVBase] w
       } else {
         MDCSetBCUID(network)
         log.debug("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
-          + ",Rejct=" + pbo.getRejectState + ",from=" + pbo.getFromBcuid)
+          + ",Reject=" + pbo.getRejectState + ",from=" + pbo.getFromBcuid)
 
         pbo.getMType match {
           case PVType.NETWORK_IDX | PVType.VIEW_CHANGE =>
@@ -73,9 +81,12 @@ object PZPVoteBaseService extends LogHelper with PBUtils with LService[PVBase] w
           case _ =>
             log.debug("unknow vote message:type=" + pbo.getMType)
         }
+        if (pbo.getState == PBFTStage.UNRECOGNIZED) {
+          log.debug("unknow current state:" + pbo.getState);
+        }
+
       }
 
-      //      }
     } catch {
       case fe: NodeInfoDuplicated => {
         ret.clear();

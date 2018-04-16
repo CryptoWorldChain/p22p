@@ -16,7 +16,7 @@ import onight.tfw.mservice.NodeHelper
 import org.fc.brewchain.p22p.node.ClusterNode
 
 @NActorProvider
-object Startup extends PSMPZP[Message] {
+class Startup extends PSMPZP[Message] {
 
   override def getCmds: Array[String] = Array("SSS");
   
@@ -24,11 +24,10 @@ object Startup extends PSMPZP[Message] {
   def init() {
 
     //    System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.url");
-    log.info("startup:");
+    log.debug("startup:");
     new Thread(new PZPBGLoader()).start()
 
-    log.debug("bdb_prodiver==" + Daos.bdbprovider);
-    log.info("tasks inited....[OK]");
+    log.debug("tasks inited....[OK]");
   }
 
   @Invalidate
@@ -42,7 +41,8 @@ class PZPBGLoader() extends Runnable with OLog {
   def run() = {
     URLHelper.init();
     while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]) {
-      log.debug("Daos Or sockSender Not Ready..:enc="+Daos.enc)
+      log.debug("Daos Or sockSender Not Ready..:enc="+Daos.enc+",sender="+MessageSender.sockSender
+          +",daoready="+Daos.isDbReady())
       Thread.sleep(1000);
     }
 

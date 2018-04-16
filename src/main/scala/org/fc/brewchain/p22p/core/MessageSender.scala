@@ -23,15 +23,29 @@ import onight.tfw.otransio.api.NonePackSender
 import org.fc.brewchain.p22p.node.Network
 import com.google.protobuf.ByteString
 import org.fc.brewchain.p22p.node.Node
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.otransio.api.PSenderService
+import onight.tfw.ntrans.api.ActorService
 
 @NActorProvider
-object MessageSender extends NActor with OLog {
+@Provides(specifications = Array(classOf[ActorService],classOf[PSenderService]))
+class CMessageSender extends NActor {
 
   //http. socket . or.  mq  are ok
   @PSender
-  @BeanProperty
   var sockSender: IPacketSender = new NonePackSender();
 
+  def setSockSender(send: IPacketSender): Unit = {
+    sockSender = send;
+    MessageSender.sockSender = sockSender;
+  }
+  def getSockSender(): IPacketSender = {
+    sockSender
+  }
+}
+
+object MessageSender extends  OLog{
+  var sockSender: IPacketSender = new NonePackSender();
   def appendUid(pack: BCPacket, node: Node)(implicit network: Network): Unit = {
     if (network.isLocalNode(node)) {
       pack.getExtHead.remove(PackHeader.PACK_TO);
@@ -68,9 +82,9 @@ object MessageSender extends NActor with OLog {
   }
 
   def postMessage(gcmd: String, body: Either[Message, ByteString], node: Node)(implicit network: Network): Unit = {
-//    if("TTTPZP".equals(gcmd)){
-//      return;
-//    }
+    //    if("TTTPZP".equals(gcmd)){
+    //      return;
+    //    }
     val pack = body match {
       case Left(m) => BCPacket.buildAsyncFrom(m, gcmd.substring(0, 3), gcmd.substring(3));
       case Right(b) => BCPacket.buildAsyncFrom(b.toByteArray(), gcmd.substring(0, 3), gcmd.substring(3));
@@ -94,9 +108,10 @@ object MessageSender extends NActor with OLog {
   def changeNodeName(oldName: String, newName: String) {
     sockSender.changeNodeName(oldName, newName);
   }
-  
+
   def setDestURI(bcuid: String, uri: String) {
     sockSender.setDestURI(bcuid, uri);
   }
 }
+
 

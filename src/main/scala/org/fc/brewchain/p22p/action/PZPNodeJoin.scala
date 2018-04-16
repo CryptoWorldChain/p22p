@@ -29,10 +29,20 @@ import org.fc.brewchain.p22p.node.PNode
 import org.brewchain.bcapi.utils.PacketIMHelper._
 import org.fc.brewchain.p22p.pbft.VoteWorker
 import org.fc.brewchain.p22p.utils.LogHelper
+import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.extender.internal.linker.ManagedType
+
+import org.apache.felix.ipojo.annotations.Instantiate
+import org.apache.felix.ipojo.annotations.Provides
+import onight.tfw.ntrans.api.ActorService
+import onight.tfw.proxy.IActor
+import onight.tfw.otransio.api.session.CMDService
 
 @NActorProvider
 @Slf4j
-object PZPNodeJoin extends PSMPZP[PSJoin] {
+@Instantiate
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor],classOf[CMDService]) )
+class  PZPNodeJoin extends PSMPZP[PSJoin] {
   override def service = PZPNodeJoinService
 }
 
