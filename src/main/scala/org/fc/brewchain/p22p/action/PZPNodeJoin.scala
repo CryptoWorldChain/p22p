@@ -65,7 +65,7 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
           System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
           log.debug("getURI:"+from.getUri)
-          from.getUri.split(",").map { new URL(_) } //checking uri
+//          from.getUri.split(",").map { new URL(_) } //checking uri
           //          val _urlcheck = new URL(from.getUri)
           if ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == network.root().node_idx) ||
             StringUtils.equals(from.getBcuid, network.root().bcuid)) {

@@ -11,10 +11,10 @@ import org.apache.felix.ipojo.annotations.StaticServiceProperty;
 import org.osgi.service.url.AbstractURLStreamHandlerService;
 import org.osgi.service.url.URLStreamHandlerService;
 
-//@Component
-//@Instantiate
-//@Provides(specifications = { URLStreamHandlerService.class }, properties = {
-//		@StaticServiceProperty(name = "url.handler.protocol", type = "java.lang.String", value = "tcp") })
+@Component
+@Instantiate
+@Provides(specifications = { URLStreamHandlerService.class }, properties = {
+		@StaticServiceProperty(name = "url.handler.protocol", type = "java.lang.String", value = "tcp") })
 public class HandlerService extends AbstractURLStreamHandlerService implements URLStreamHandlerService {
 
 	@Override
