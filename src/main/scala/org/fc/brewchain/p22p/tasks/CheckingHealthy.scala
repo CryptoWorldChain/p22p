@@ -83,6 +83,13 @@ case class CheckingHealthy(network: Network) extends SRunner {
             retpack.getPnodesList.map { pn =>
               network.addPendingNode(fromPMNode(pn));
             }
+            //fix bugs when some node down.2018.3
+            retpack.getDnodesList.map { pn =>
+              if(network.nodeByBcuid(pn.getBcuid)==network.noneNode)
+              {
+                network.addPendingNode(fromPMNode(pn));
+              }
+            }
           }
           def onFailed(e: java.lang.Exception, fp: FramePacket) {
             log.debug("send HBTPZP Direct ERROR " + n.uri + ",e=" + e.getMessage, e)
