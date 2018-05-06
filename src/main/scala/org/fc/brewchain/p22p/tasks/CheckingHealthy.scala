@@ -33,7 +33,7 @@ case class CheckingHealthy(network: Network) extends SRunner {
   def getName() = "CheckingHealthy"
 
   def runOnce() = {
-    if (!StringUtils.isBlank(network.root().pub_key)) {
+//    if (!StringUtils.isBlank(network.root().pub_key)) {
       val pack = PSNodeInfo.newBuilder().setNode(toPMNode(network.root()))
         .setNid(network.netid).build()
       implicit val _net = network
@@ -100,7 +100,7 @@ case class CheckingHealthy(network: Network) extends SRunner {
           }
         });
       }
-    }
+//    }
   }
   //Scheduler.scheduleWithFixedDelay(new Runnable, initialDelay, delay, unit)
   def main(args: Array[String]): Unit = {
