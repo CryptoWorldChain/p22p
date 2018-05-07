@@ -41,8 +41,8 @@ import onight.tfw.otransio.api.session.CMDService
 @NActorProvider
 @Slf4j
 @Instantiate
-@Provides(specifications = Array(classOf[ActorService], classOf[IActor],classOf[CMDService]) )
-class  PZPNodeJoin extends PSMPZP[PSJoin] {
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor], classOf[CMDService]))
+class PZPNodeJoin extends PSMPZP[PSJoin] {
   override def service = PZPNodeJoinService
 }
 
@@ -64,8 +64,8 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         ret.setMyInfo(toPMNode(network.root))
         if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
           System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
-          log.debug("getURI:"+from.getUri)
-//          from.getUri.split(",").map { new URL(_) } //checking uri
+          log.debug("getURI:" + from.getUri)
+          //          from.getUri.split(",").map { new URL(_) } //checking uri
           //          val _urlcheck = new URL(from.getUri)
           if ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == network.root().node_idx) ||
             StringUtils.equals(from.getBcuid, network.root().bcuid)) {
@@ -88,14 +88,24 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
             log.info("add Pending Node:bcuid=" + n.bcuid);
             network.onlineMap.put(n.bcuid, n);
             network.addPendingNode(n)
-            try {
-              VoteWorker.synchronized {
-                log.debug("notify to wote");
-                VoteWorker.notifyAll()
-              }
-            } finally {
-
+            val allNC = (network.directNodeByBcuid.size +
+              network.pendingNodeByBcuid.size)
+            if (pbo.getNodeCount >= allNC * 2 / 3
+                && (pbo.getNodeNotifiedCount >= pbo.getNodeCount - 1 )) {
+              log.debug("start join network and vote")
+              network.voteNodeMap.runOnce();
+            } else {
+              log.debug("cannot start join network and vote:NC=" + pbo.getNodeCount + ",all=" + allNC)
             }
+
+            //            try {
+            //              VoteWorker.synchronized {
+            //                log.debug("notify to wote");
+            //                VoteWorker.notifyAll()
+            //              }
+            //            } finally {
+            //
+            //            }
           }
         } else if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
           //        NodeInstance.curnode.addPendingNode(new LinkNode(from.getProtocol, from.getNodeName, from.getAddress, // 

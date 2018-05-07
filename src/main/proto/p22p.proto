@@ -47,6 +47,8 @@ message PSJoin{//加入
 		NODE_CONNECT = 1;//节点请求连接
 	}
 	Operation op = 2;//操作类型
+	int32	node_count = 3;//network counter
+	int32	node_notified_count = 4;//already notified nodes
 	string nid = 50;//网络ID	
 }
 

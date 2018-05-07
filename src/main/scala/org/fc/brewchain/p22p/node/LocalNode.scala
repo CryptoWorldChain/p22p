@@ -77,7 +77,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
               val r = if (StringUtils.isBlank(node_info)) {
                 newNode(PNode.genIdx());
               } else {
-                deserialize(node_info)
+                deserialize(node_info,"tcp://" + NodeHelper.getCurrNodeListenOutAddr + ":" + NodeHelper.getCurrNodeListenOutPort)
               }
               log.info("load node from db:" + r.bcuid + ",idx=" + r.node_idx)
               r

@@ -43,15 +43,16 @@ trait PMNodeHelper {
     Base64.encodeBase64String(toBytes(toFullPMNode(n)))
   }
 
-  def deserialize(str: String): PNode = {
-    fromPMNode(pser.deserialize(Base64.decodeBase64(str), classOf[PMNodeInfo]))
+  def deserialize(str: String,_uri:String = null): PNode = {
+    fromPMNode(pser.deserialize(Base64.decodeBase64(str), classOf[PMNodeInfo]),_uri)
   }
 
-  def fromPMNode(pm: PMNodeInfoOrBuilder): PNode = {
+  def fromPMNode(pm: PMNodeInfoOrBuilder, _overrided_uri: String = null): PNode = {
     PNode(
       _name = pm.getNodeName, _node_idx = pm.getNodeIdx, //node info
       _sign = pm.getSign,
-      _uri = pm.getUri, //
+      _uri =
+        if (_overrided_uri == null) pm.getUri else _overrided_uri, //
       _startup_time = pm.getStartupTime, //
       _pub_key = pm.getPubKey, //
       _counter = new CCSet(pm.getRecvCc, pm.getSendCc, pm.getBlockCc),

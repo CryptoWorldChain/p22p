@@ -238,11 +238,12 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   val joinNetwork = JoinNetwork(this, nodelist);
   val stateStorage = StateStorage(this);
   val voteQueue = VoteQueue(this);
-
+  val checkingHealthy = CheckingHealthy(this);
+  val voteNodeMap = VoteNodeMap(this, voteQueue);
   def startup(): Unit = {
     Scheduler.scheduleWithFixedDelay(joinNetwork, 5, 10, TimeUnit.SECONDS)
-    Scheduler.scheduleWithFixedDelay(CheckingHealthy(this), 10, Config.TICK_CHECK_HEALTHY, TimeUnit.SECONDS)
-    Scheduler.scheduleWithFixedDelay(VoteNodeMap(this, voteQueue), 10, Config.TICK_VOTE_MAP, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(checkingHealthy, 10, Config.TICK_CHECK_HEALTHY, TimeUnit.SECONDS)
+    Scheduler.scheduleWithFixedDelay(voteNodeMap, 10, Config.TICK_VOTE_MAP, TimeUnit.SECONDS)
     Scheduler.scheduleWithFixedDelay(VoteWorker(this, voteQueue), 10, Config.TICK_VOTE_WORKER, TimeUnit.SECONDS)
   }
 }
