@@ -1,4 +1,4 @@
-package org.fc.brewchain.p22p.pbft
+  package org.fc.brewchain.p22p.pbft
 
 import java.util.concurrent.atomic.AtomicInteger
 import org.fc.brewchain.p22p.Daos
