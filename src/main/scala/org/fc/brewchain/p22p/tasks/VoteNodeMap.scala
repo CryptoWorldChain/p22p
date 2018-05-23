@@ -75,7 +75,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
 
           vbody.setPendingBitsEnc(hexToMapping(pendingbits))
           vbody.setNodeBitsEnc(network.node_strBits)
-          vbase.setContents(toByteSting(vbody))
+          vbase.setContents(toByteString(vbody))
           //      vbase.addVoteContents(Any.pack(vbody.build()))
           //      if (network.node_bits.bitCount <= 0) {
           //        log.debug("networks has not directnode!")

@@ -107,6 +107,7 @@ enum PBFTStage{
 enum PVType{
 	NETWORK_IDX = 0;//投票pending 的节点
 	VIEW_CHANGE = 1; // can make snapshot
+	EXT_PBFT_VOTE = 2;//其他想利用pbft投票的信息
 }
 
 

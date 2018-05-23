@@ -59,7 +59,7 @@ case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner wi
       vbase.setFromBcuid(network.root.bcuid);
       vbase.setCreateTime(System.currentTimeMillis())
       vbase.setLastUpdateTime(vbase.getCreateTime)
-      vbase.setContents(toByteSting(PBVoteViewChange.newBuilder().setStoreNum(pbo1.getStoreNum + 1)
+      vbase.setContents(toByteString(PBVoteViewChange.newBuilder().setStoreNum(pbo1.getStoreNum + 1)
         .setViewCounter(0).setV(vbase.getV)));
       val ov = Daos.viewstateDB.get(network.stateStorage.STR_seq(vbase)).get match {
         case ov if ov == null =>
@@ -97,6 +97,8 @@ case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner wi
           DMVotingNodeBits
         case PVType.VIEW_CHANGE =>
           DMViewChange
+        case PVType.EXT_PBFT_VOTE =>
+          null
         case _ => null;
       }
       log.debug("makeVote:State=" + pbo.getState + ",trystate=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid);

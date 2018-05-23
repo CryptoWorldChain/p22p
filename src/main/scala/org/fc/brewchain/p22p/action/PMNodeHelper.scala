@@ -64,11 +64,11 @@ trait PMNodeHelper {
   def toBytes(body: MessageOrBuilder): Array[Byte] = {
     pser.serialize(body).asInstanceOf[Array[Byte]]
   }
-  def toByteSting(body: MessageOrBuilder): ByteString = {
+  def toByteString(body: MessageOrBuilder): ByteString = {
     ByteString.copyFrom(toBytes(body))
   }
 
-  def fromByteSting[T](str: ByteString, clazz: Class[T]): T = {
+  def fromByteString[T](str: ByteString, clazz: Class[T]): T = {
     pser.deserialize(str.toByteArray(), clazz)
   }
 
