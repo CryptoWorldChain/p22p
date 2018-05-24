@@ -46,7 +46,14 @@ class PZPBGLoader() extends Runnable with OLog {
     URLHelper.init();
     while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]) {
       log.debug("Daos Or sockSender Not Ready..:enc=" + Daos.enc + ",sender=" + MessageSender.sockSender
-        + ",daoready=" + Daos.isDbReady())
+        + ",daoready=" + Daos.isDbReady() )
+//      if (Daos.odb != null) {
+//        log.debug(":odb.getDaosupport=" + Daos.odb.getDaosupport)
+//        if (Daos.odb.getDaosupport != null) {
+//          log.debug(":odb.getDaosupport.getDaosupport=" + Daos.odb.getDaosupport.getDaosupport)
+//        }
+//
+//      }
       Thread.sleep(1000);
     }
 

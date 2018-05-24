@@ -103,7 +103,7 @@ object DMViewChange extends Votable with OLog {
     Votes.vote(reallist).PBFTVote({
       x =>
         val p = PVBase.newBuilder().mergeFrom(x.getValue.getExtdata).build();
-        log.debug("voteNodeStages::State=" + p.getState + ",Rejet=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
+        log.debug("voteNodeStages::State=" + p.getState + ",Reject=" + p.getRejectState + ",V=" + p.getV + ",N=" + p.getN + ",O=" + p.getOriginBcuid
           + ",F=" + p.getFromBcuid + ",KEY=" + new String(x.getKey.getData.toByteArray()) + ",OVS=" + x.getValue.getSecondKey)
         if (pbo.getCreateTime - p.getCreateTime > Config.TIMEOUT_STATE_VIEW_RESET) {
           log.debug("Force TIMEOUT node state to My State:" + p.getState + ",My=" + pbo.getState);

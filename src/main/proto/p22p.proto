@@ -20,6 +20,7 @@ enum PCommand {
 	HBT = 10;//HeartBeat!检查心跳
 	
 	TTT = 30;//ping,pong,wall ,tesing
+	TTS = 31;//vote string test
 };
 
 message PMNodeInfo{
@@ -107,7 +108,7 @@ enum PBFTStage{
 enum PVType{
 	NETWORK_IDX = 0;//投票pending 的节点
 	VIEW_CHANGE = 1; // can make snapshot
-	EXT_PBFT_VOTE = 2;//其他想利用pbft投票的信息
+	STR_PBFT_VOTE = 2;//其他想利用pbft投票的信息
 }
 
 
@@ -128,8 +129,9 @@ message PVBase{
 	string message_uid = 30;//消息的uuid
 
 	string from_bcuid = 31;//从哪个节点名称来的
-	
+	string ext_type = 32;//
 	string nid = 50;//网络ID
+	
 	string sign = 100; //对上述数据的签名结果
 }
 
@@ -142,6 +144,25 @@ message PBVoteNodeIdx{//投票决定节点的idx,80%通过才行
 	string nid = 50;//网络ID
 }
 
+message PBVoteString{
+	enum PVStatus{
+		PVS_NOT_READY = 0;
+		PVS_VOTED = 1;
+	}
+	string vote_content = 1;
+	PVStatus status = 2;
+	string gcmd = 3;
+	enum PVOperation{
+		VO_VOTESTART = 0;
+		VO_MAKEDECISION = 1;
+		VO_FINALMERGE = 2;
+	}
+	PVOperation op = 4;
+	string vote_result = 5;
+	string messageid = 10;
+	string ext_type = 11; 
+	string nid = 50;//网络ID
+}
 
 message PBVoteViewChange{//投票决定节点的idx,80%通过才行
 	uint32 v = 1;//当前的v
@@ -149,7 +170,6 @@ message PBVoteViewChange{//投票决定节点的idx,80%通过才行
 	uint32 store_num = 3;// 为了支持快照定义的版本
 	string nid = 50;//网络ID
 }
-
 
 message PSVoteState{
 	PVType t = 1;//消息类型

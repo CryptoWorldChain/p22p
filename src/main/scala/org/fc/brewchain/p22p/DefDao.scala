@@ -33,7 +33,7 @@ abstract class PSMPZP[T <: Message] extends SessionModules[T] with PBUtils with 
 @NActorProvider
 @Slf4j
 @Instantiate
-@Provides(specifications = Array(classOf[ActorService],classOf[IJPAClient]))
+@Provides(specifications = Array(classOf[ActorService], classOf[IJPAClient]))
 class InstDaos extends PSMPZP[Message] with ActorService {
 
   @StoreDAO(target = "bc_bdb", daoClass = classOf[ODSP22p])
@@ -44,10 +44,9 @@ class InstDaos extends PSMPZP[Message] with ActorService {
   @BeanProperty
   var viewstateDB: ODBSupport = null
 
-
   @ActorRequire(name = "bc_encoder", scope = "global") //  @BeanProperty
   var enc: EncAPI = null;
-  
+
   def setOdb(daodb: DomainDaoSupport) {
     if (daodb != null && daodb.isInstanceOf[ODBSupport]) {
       odb = daodb.asInstanceOf[ODBSupport];
@@ -69,26 +68,27 @@ class InstDaos extends PSMPZP[Message] with ActorService {
     enc = _enc;
     Daos.enc = _enc;
   }
-  def getEnc():EncAPI= {
-     enc;
+  def getEnc(): EncAPI = {
+    enc;
   }
 
 }
 
 object Daos {
-  
-  val props:PropHelper = new PropHelper(null);
-  
+
+  val props: PropHelper = new PropHelper(null);
+
   var odb: ODBSupport = null
 
   var viewstateDB: ODBSupport = null
-
 
   var enc: EncAPI = null;
 
   def isDbReady(): Boolean = {
     return odb != null && odb.getDaosupport.isInstanceOf[ODBSupport] &&
-      viewstateDB != null && viewstateDB.getDaosupport.isInstanceOf[ODBSupport]  &&
+      odb.getDaosupport != null &&
+      odb.getDaosupport.getDaosupport != null &&
+      viewstateDB != null && viewstateDB.getDaosupport.isInstanceOf[ODBSupport] &&
       enc != null;
   }
 }

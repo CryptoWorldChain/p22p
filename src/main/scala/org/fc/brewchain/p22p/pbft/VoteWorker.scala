@@ -97,8 +97,8 @@ case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner wi
           DMVotingNodeBits
         case PVType.VIEW_CHANGE =>
           DMViewChange
-        case PVType.EXT_PBFT_VOTE =>
-          null
+        case PVType.STR_PBFT_VOTE =>
+          ExtStringVoter
         case _ => null;
       }
       log.debug("makeVote:State=" + pbo.getState + ",trystate=" + newstate + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid);

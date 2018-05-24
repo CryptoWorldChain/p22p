@@ -76,7 +76,7 @@ object PZPVoteBaseService extends LogHelper with PBUtils with LService[PVBase] w
           + ",Reject=" + pbo.getRejectState + ",from=" + pbo.getFromBcuid)
 
         pbo.getMType match {
-          case PVType.NETWORK_IDX | PVType.VIEW_CHANGE | PVType.EXT_PBFT_VOTE =>
+          case PVType.NETWORK_IDX | PVType.VIEW_CHANGE | PVType.STR_PBFT_VOTE =>
             network.voteQueue.appendInQ(pbo)
           case _ =>
             log.debug("unknow vote message:type=" + pbo.getMType)

@@ -1,4 +1,4 @@
-  package org.fc.brewchain.p22p.pbft
+package org.fc.brewchain.p22p.pbft
 
 import java.util.concurrent.atomic.AtomicInteger
 import org.fc.brewchain.p22p.Daos
@@ -29,8 +29,11 @@ import org.apache.commons.codec.binary.Base64
 import org.fc.brewchain.p22p.node.Network
 
 case class StateStorage(network: Network) extends OLog {
-  def STR_seq(pbo: PVBaseOrBuilder): String = STR_seq(pbo.getMTypeValue)
-  def STR_seq(uid: Int): String = "v_seq_" + network.netid + "." + uid
+  def STR_seq(pbo: PVBaseOrBuilder): String = STR_seq(pbo.getMTypeValue, pbo.getExtType match {
+    case null => ""
+    case v: String => v
+  })
+  def STR_seq(uid: Int, extstr: String = ""): String = "v_seq_" + network.netid + "." + uid
 
   def nextV(pbo: PVBase.Builder): Int = {
     this.synchronized {
