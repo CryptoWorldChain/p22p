@@ -177,7 +177,9 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket]): Unit = {
     MessageSender.sendMessage(gcmd, body, node, cb)(this)
   }
-
+  def asendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket]): Unit = {
+    MessageSender.sendMessage(gcmd, body, node, cb)(this)
+  }
   def bwallMessage(gcmd: String, body: Either[Message, ByteString], bits: BigInt, messageId: String = ""): Unit = {
     directNodes.map(n =>
       if (bits.testBit(n.node_idx)) {
@@ -235,7 +237,10 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
       })
   }
   //
-  val joinNetwork = JoinNetwork(this, nodelist);
+  val joinNetwork = JoinNetwork(this, nodelist.split(",").map { x =>
+    log.debug("x=" + x)
+    PNode.fromURL(x);
+  });
   val stateStorage = StateStorage(this);
   val voteQueue = VoteQueue(this);
   val checkingHealthy = CheckingHealthy(this);

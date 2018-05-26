@@ -26,9 +26,10 @@ import org.fc.brewchain.p22p.node.Node
 import org.apache.felix.ipojo.annotations.Provides
 import onight.tfw.otransio.api.PSenderService
 import onight.tfw.ntrans.api.ActorService
+import org.fc.brewchain.p22p.utils.Config
 
 @NActorProvider
-@Provides(specifications = Array(classOf[ActorService],classOf[PSenderService]))
+@Provides(specifications = Array(classOf[ActorService], classOf[PSenderService]))
 class CMessageSender extends NActor {
 
   //http. socket . or.  mq  are ok
@@ -44,7 +45,7 @@ class CMessageSender extends NActor {
   }
 }
 
-object MessageSender extends  OLog{
+object MessageSender extends OLog {
   var sockSender: IPacketSender = new NonePackSender();
   def appendUid(pack: BCPacket, node: Node)(implicit network: Network): Unit = {
     if (network.isLocalNode(node)) {
@@ -57,6 +58,20 @@ object MessageSender extends  OLog{
   }
 
   def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket])(implicit network: Network) {
+    val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
+    appendUid(pack, node)
+    log.trace("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
+    try {
+      cb.onSuccess(sockSender.send(pack, Config.TIMEOUT_MS_MESSAGE))
+    } catch {
+      case e: Exception =>
+        log.trace("sendMessageFailed:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo(), e)
+        cb.onFailed(e,pack);
+    }
+    
+  }
+
+  def asendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket])(implicit network: Network) {
     val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
     appendUid(pack, node)
     log.trace("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())

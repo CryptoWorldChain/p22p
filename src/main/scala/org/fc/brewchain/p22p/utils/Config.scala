@@ -23,6 +23,7 @@ object Config {
   val TICK_VOTE_MAP = prop.get(PROP_DOMAIN + "tick.vote.map", 10);
   val TICK_VOTE_WORKER = prop.get(PROP_DOMAIN + "tick.vote.worker", 1);
   val NUM_VIEWS_EACH_SNAPSHOT = prop.get(PROP_DOMAIN + "num.views.each.snapshot", 10); //每快照有几个
+  val TIMEOUT_MS_MESSAGE = prop.get(PROP_DOMAIN + "timeout.ms.message", 60*1000); //每快照有几个
 
   val STR_REJECT = "__REJECT";
 

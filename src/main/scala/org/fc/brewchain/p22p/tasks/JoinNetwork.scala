@@ -32,7 +32,7 @@ import org.fc.brewchain.p22p.utils.LogHelper
 import java.util.concurrent.CountDownLatch
 
 //投票决定当前的节点
-case class JoinNetwork(network: Network, statupNodes: String) extends SRunner with LogHelper {
+case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends SRunner with LogHelper {
   def getName() = "JoinNetwork"
   val sameNodes = new HashMap[Integer, PNode]();
   val pendingJoinNodes = new ConcurrentHashMap[String, PNode]();
@@ -50,10 +50,7 @@ case class JoinNetwork(network: Network, statupNodes: String) extends SRunner wi
         try {
           hasNewNode = false;
           MDCSetBCUID(network);
-          val namedNodes = (statupNodes.split(",").map { x =>
-            log.debug("x=" + x)
-            PNode.fromURL(x);
-          } ++ pendingJoinNodes.values()).filter { x =>
+          val namedNodes = (statupNodes ++ pendingJoinNodes.values()).filter { x =>
             !sameNodes.containsKey(x.uri.hashCode()) && !joinedNodes.containsKey(x.uri.hashCode()) && //
               !network.isLocalNode(x)
           };
@@ -71,7 +68,7 @@ case class JoinNetwork(network: Network, statupNodes: String) extends SRunner wi
 
               log.debug("JoinNetwork :Start to Connect---:" + n.uri);
 
-              MessageSender.sendMessage("JINPZP", joinbody.build(), n, new CallBack[FramePacket] {
+              MessageSender.asendMessage("JINPZP", joinbody.build(), n, new CallBack[FramePacket] {
                 def onSuccess(fp: FramePacket) = {
                   MDCSetBCUID(network);
                   cdl.countDown()
