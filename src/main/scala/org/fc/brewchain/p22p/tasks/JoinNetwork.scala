@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap
 import org.fc.brewchain.p22p.node.Network
 import sun.rmi.log.LogHandler
 import org.fc.brewchain.p22p.utils.LogHelper
+import java.util.concurrent.CountDownLatch
 
 //投票决定当前的节点
 case class JoinNetwork(network: Network, statupNodes: String) extends SRunner with LogHelper {
@@ -56,6 +57,7 @@ case class JoinNetwork(network: Network, statupNodes: String) extends SRunner wi
             !sameNodes.containsKey(x.uri.hashCode()) && !joinedNodes.containsKey(x.uri.hashCode()) && //
               !network.isLocalNode(x)
           };
+          val cdl = new CountDownLatch(namedNodes.size);
           namedNodes.map { n => //for each know Nodes
             //          val n = namedNodes(0);
             log.debug("JoinNetwork :Run----Try to Join :MainNet=" + n.uri + ",cur=" + network.root.uri);
@@ -63,13 +65,17 @@ case class JoinNetwork(network: Network, statupNodes: String) extends SRunner wi
               val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()))
                 .setNid(network.netid)
                 .setNodeCount(network.pendingNodeByBcuid.size
-                    +network.directNodeByBcuid.size)
-                .setNodeNotifiedCount(joinedNodes.size())
-                ;
+                  + network.directNodeByBcuid.size)
+                .setNodeNotifiedCount(joinedNodes.size());
+              val starttime = System.currentTimeMillis();
+
               log.debug("JoinNetwork :Start to Connect---:" + n.uri);
+
               MessageSender.sendMessage("JINPZP", joinbody.build(), n, new CallBack[FramePacket] {
                 def onSuccess(fp: FramePacket) = {
-                  log.debug("send JINPZP success:to " + n.uri)
+                  MDCSetBCUID(network);
+                  cdl.countDown()
+                  log.debug("send JINPZP success:to " + n.uri + ",cost=" + (System.currentTimeMillis() - starttime))
                   val retjoin = PRetJoin.newBuilder().mergeFrom(fp.getBody);
                   if (retjoin.getRetCode() == -1) { //same message
                     log.debug("get Same Node:" + n.getName);
@@ -101,11 +107,22 @@ case class JoinNetwork(network: Network, statupNodes: String) extends SRunner wi
                 }
                 def onFailed(e: java.lang.Exception, fp: FramePacket) {
                   log.debug("send JINPZP ERROR " + n.uri + ",e=" + e.getMessage, e)
+                  cdl.countDown()
                 }
               });
             } else {
+              cdl.countDown()
               log.debug("JoinNetwork :Finished ---- Current node is MainNode");
             }
+            try {
+              cdl.await(60, TimeUnit.SECONDS);
+            } catch {
+              case t: Throwable =>
+                log.debug("error connect to all nodes:" + t.getMessage, t);
+            } finally {
+
+            }
+            log.debug("finished connect to all nodes");
           }
           if (namedNodes.size == 0) {
             log.debug("cannot reach more nodes. try from begining");
