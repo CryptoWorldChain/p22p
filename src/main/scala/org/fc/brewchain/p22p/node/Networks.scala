@@ -239,7 +239,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   //
   val joinNetwork = JoinNetwork(this, nodelist.split(",").map { x =>
     log.debug("x=" + x)
-    PNode.fromURL(x);
+    PNode.fromURL(x,this.netid);
   });
   val stateStorage = StateStorage(this);
   val voteQueue = VoteQueue(this);

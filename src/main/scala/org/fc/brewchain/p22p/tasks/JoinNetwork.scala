@@ -40,6 +40,7 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
   val duplictedInfoNodes = Map[Int, PNode]();
   def runOnce() = {
     Thread.currentThread().setName("JoinNetwork");
+
     implicit val _net = network
     if (network.inNetwork()) {
       log.debug("CurrentNode In Network");
@@ -57,7 +58,7 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
           val cdl = new CountDownLatch(namedNodes.size);
           namedNodes.map { n => //for each know Nodes
             //          val n = namedNodes(0);
-            log.debug("JoinNetwork :Run----Try to Join :MainNet=" + n.uri + ",cur=" + network.root.uri);
+            log.debug("JoinNetwork :Run----Try to Join :MainNet=" + n.uri + ",M.bcuid=" + n.bcuid() + ",cur=" + network.root.uri);
             if (!network.root.equals(n)) {
               val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()))
                 .setNid(network.netid)
@@ -78,9 +79,9 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
                     log.debug("get Same Node:" + n.getName);
                     sameNodes.put(n.uri.hashCode(), n);
                     //duplictedInfoNodes.+=(n.uri.hashCode() -> n);
-                    MessageSender.dropNode(n)
                     val newN = fromPMNode(retjoin.getMyInfo)
                     MessageSender.changeNodeName(n.bcuid, newN.bcuid);
+                    MessageSender.dropNode(newN)
                     network.onlineMap.put(newN.bcuid(), newN)
                     network.addPendingNode(newN);
                   } else if (retjoin.getRetCode() == -2) {

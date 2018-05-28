@@ -91,11 +91,12 @@ case class PNode(_name: String, _node_idx: Int, //node info
 }
 
 object PNode {
-  def fromURL(url: String): PNode = {
+  def fromURL(url: String,netid:String): PNode = {
     val u = new URL(url);
     val n = new PNode(_name = u.getHost, _node_idx = 0, "", _uri = u.toString(),
-      _bcuid = Base64.encodeBase64URLSafeString(url.getBytes),
+      _bcuid = Base64.encodeBase64URLSafeString((url+"?netid="+netid).getBytes),
       _pub_key = "")
+//println("pNode.fromURL="+n._bcuid);    
     n
   }
 

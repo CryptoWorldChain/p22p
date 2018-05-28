@@ -66,9 +66,9 @@ object MessageSender extends OLog {
     } catch {
       case e: Exception =>
         log.trace("sendMessageFailed:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo(), e)
-        cb.onFailed(e,pack);
+        cb.onFailed(e, pack);
     }
-    
+
   }
 
   def asendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket])(implicit network: Network) {
@@ -118,6 +118,9 @@ object MessageSender extends OLog {
 
   def dropNode(node: Node) {
     sockSender.tryDropConnection(node.bcuid);
+  }
+  def dropNode(bcuid: String) {
+    sockSender.tryDropConnection(bcuid);
   }
 
   def changeNodeName(oldName: String, newName: String) {

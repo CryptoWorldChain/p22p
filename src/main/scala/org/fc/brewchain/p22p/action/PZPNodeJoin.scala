@@ -37,6 +37,7 @@ import org.apache.felix.ipojo.annotations.Provides
 import onight.tfw.ntrans.api.ActorService
 import onight.tfw.proxy.IActor
 import onight.tfw.otransio.api.session.CMDService
+import org.fc.brewchain.p22p.core.MessageSender
 
 @NActorProvider
 @Slf4j
@@ -70,6 +71,7 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
           if ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == network.root().node_idx) ||
             StringUtils.equals(from.getBcuid, network.root().bcuid)) {
             log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid);
+//            MessageSender.dropNode(from.getBcuid);
             ret.setRetCode(-1)
             throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
           } else if (network.node_bits.testBit(from.getTryNodeIdx)) {

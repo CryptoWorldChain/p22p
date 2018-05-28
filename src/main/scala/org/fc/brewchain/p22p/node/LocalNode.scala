@@ -88,9 +88,9 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
                 r
             }
 
-          if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
-            MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
-          }
+//          if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
+//            MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
+//          }
 
         } catch {
           case e: Throwable =>
