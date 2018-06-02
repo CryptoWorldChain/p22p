@@ -32,6 +32,7 @@ import org.fc.brewchain.p22p.node.router.IntNode
 import onight.osgi.annotation.NActorProvider
 import onight.tfw.ntrans.api.NActor
 import onight.tfw.async.CallBack
+import onight.tfw.outils.serialize.UUIDGenerator
 
 case class BitEnc(bits: BigInt) extends BitMap {
   val strEnc: String = hexToMapping(bits);
@@ -257,6 +258,8 @@ object Networks extends NActor with LogHelper {
   //  val raft: Network = new Network("raft","tcp://127.0.0.1:5100");
   val netsByID = new HashMap[String, Network]();
 
+  val instanceid = "NET_"+UUIDGenerator.generate();
+  
   def networkByID(netid: String): Network = {
     netsByID.get(netid);
   }

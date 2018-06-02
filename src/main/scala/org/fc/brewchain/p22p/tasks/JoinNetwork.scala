@@ -62,6 +62,7 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
             if (!network.root.equals(n)) {
               val joinbody = PSJoin.newBuilder().setOp(PSJoin.Operation.NODE_CONNECT).setMyInfo(toPMNode(network.root()))
                 .setNid(network.netid)
+                .setNetworkInstance(Networks.instanceid)
                 .setNodeCount(network.pendingNodeByBcuid.size
                   + network.directNodeByBcuid.size)
                 .setNodeNotifiedCount(joinedNodes.size());
@@ -78,7 +79,6 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
                   if (retjoin.getRetCode() == -1) { //same message
                     log.debug("get Same Node:" + n.getName);
                     sameNodes.put(n.uri.hashCode(), n);
-                    //duplictedInfoNodes.+=(n.uri.hashCode() -> n);
                     val newN = fromPMNode(retjoin.getMyInfo)
                     MessageSender.changeNodeName(n.bcuid, newN.bcuid);
                     MessageSender.dropNode(newN)
@@ -86,8 +86,8 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
                     network.addPendingNode(newN);
                   } else if (retjoin.getRetCode() == -2) {
                     log.debug("get duplex NodeIndex:" + n.getName);
+                    sameNodes.put(n.uri.hashCode(), n);
                     duplictedInfoNodes.+=(n.uri.hashCode() -> n);
-
                   } else if (retjoin.getRetCode() == 0) {
                     joinedNodes.put(n.uri.hashCode(), n);
                     val newN = fromPMNode(retjoin.getMyInfo)
@@ -101,7 +101,7 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
                       //
                     }
                   }
-                  log.debug("get nodes:count=" + retjoin.getNodesCount);
+                  log.debug("get nodes:count=" + retjoin.getNodesCount+","+sameNodes);
                 }
                 def onFailed(e: java.lang.Exception, fp: FramePacket) {
                   log.debug("send JINPZP ERROR " + n.uri + ",e=" + e.getMessage, e)

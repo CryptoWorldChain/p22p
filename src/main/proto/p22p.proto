@@ -50,6 +50,7 @@ message PSJoin{//加入
 	Operation op = 2;//操作类型
 	int32	node_count = 3;//network counter
 	int32	node_notified_count = 4;//already notified nodes
+	string  network_instance = 5;// to check instance 
 	string nid = 50;//网络ID	
 }
 

@@ -15,7 +15,7 @@ trait SRunner extends Runnable with OLog with PMNodeHelper {
           log.debug(getName() + ": ----------- [START]")
 
     try {
-      runOnce()
+        runOnce()
     } catch {
       case e: Throwable =>
         log.debug(getName() + ":  ----------- Error", e);

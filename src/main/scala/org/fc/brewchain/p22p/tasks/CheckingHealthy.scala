@@ -28,11 +28,15 @@ import org.fc.brewchain.p22p.pbgens.P22P.PRetNodeInfo
 import scala.collection.JavaConversions._
 import org.fc.brewchain.p22p.node.Network
 import java.util.concurrent.atomic.AtomicBoolean
+import scala.collection.mutable.Map
+import java.util.concurrent.atomic.AtomicInteger
+import org.fc.brewchain.p22p.utils.Config
 
 //投票决定当前的节点
 case class CheckingHealthy(network: Network) extends SRunner {
   def getName() = "CheckingHealthy"
   val checking = new AtomicBoolean(false)
+  val failedChecking = Map[String, AtomicInteger]();
   def runOnce() = {
     if (checking.compareAndSet(false, true)) {
       try {
@@ -45,7 +49,9 @@ case class CheckingHealthy(network: Network) extends SRunner {
           MessageSender.sendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
             def onSuccess(fp: FramePacket) = {
               log.debug("send HBTPZP success:to " + n.uri + ",body=" + fp.getBody)
+              failedChecking.remove(n.bcuid)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
+              
               //          log.debug("get nodes:" + retpack);
               if (retpack.getCurrent == null) {
                 log.debug("Node EROR NotFOUND:" + retpack);
@@ -67,10 +73,18 @@ case class CheckingHealthy(network: Network) extends SRunner {
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               log.debug("send HBTPZP ERROR " + n.uri + ",e=" + e.getMessage, e)
-              network.removePendingNode(n);
-              MessageSender.dropNode(n)
-              network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
-              network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+              failedChecking.get(n.bcuid) match {
+                case Some(cc) =>
+                  if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
+                    log.debug("Drop Node for HeatBeat Failed!");
+                    network.removePendingNode(n);
+                    MessageSender.dropNode(n)
+                    network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
+                    network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+                  }
+                case None =>
+                  failedChecking.put(n.bcuid, new AtomicInteger(0));
+              }
             }
           });
         }
@@ -81,6 +95,7 @@ case class CheckingHealthy(network: Network) extends SRunner {
             def onSuccess(fp: FramePacket) = {
               log.debug("send HBTPZP Direct success:to " + n.uri + ",body=" + fp.getBody)
               network.onlineMap.put(n.bcuid, n);
+              failedChecking.remove(n.bcuid)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
               log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
               retpack.getPnodesList.map { pn =>
@@ -95,15 +110,23 @@ case class CheckingHealthy(network: Network) extends SRunner {
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               log.debug("send HBTPZP Direct ERROR " + n.uri + ",e=" + e.getMessage, e)
-              MessageSender.dropNode(n)
-              network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
-              network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
-              network.removeDNode(n);
+              failedChecking.get(n.bcuid) match {
+                case Some(cc) =>
+                  if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
+                    log.debug("Drop DNode for HeatBeat Failed!");
+                    MessageSender.dropNode(n)
+                    network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
+                    network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+                    network.removeDNode(n);
+                  }
+                case None =>
+                  failedChecking.put(n.bcuid, new AtomicInteger(0));
+              }
             }
+
           });
         }
-      }
-      finally{
+      } finally {
         checking.compareAndSet(true, false);
       }
     }

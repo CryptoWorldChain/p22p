@@ -68,16 +68,21 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
           log.debug("getURI:" + from.getUri)
           //          from.getUri.split(",").map { new URL(_) } //checking uri
           //          val _urlcheck = new URL(from.getUri)
-          if ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == network.root().node_idx) ||
-            StringUtils.equals(from.getBcuid, network.root().bcuid)) {
-            log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid);
-//            MessageSender.dropNode(from.getBcuid);
+          val samenode = StringUtils.equals(pbo.getNetworkInstance,
+            Networks.instanceid) ;
+          if ( samenode &&
+            ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == network.root().node_idx) ||
+            StringUtils.equals(from.getBcuid, network.root().bcuid))) {
+            log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid+",netid="+
+                samenode+":"+pbo.getNetworkInstance+"-->"+Networks.instanceid
+                );
+            //            MessageSender.dropNode(from.getBcuid);
             ret.setRetCode(-1)
             throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
           } else if (network.node_bits.testBit(from.getTryNodeIdx)) {
             network.nodeByIdx(from.getTryNodeIdx) match {
-              case Some(n) if n.bcuid.endsWith(from.getBcuid) =>
-                log.debug("node backon line ")
+              case Some(n) if n.bcuid.endsWith(from.getBcuid) && !samenode && from.getTryNodeIdx != network.root().node_idx =>
+                log.debug("node back online ")
                 network.onlineMap.put(n.bcuid, n);
               case _ =>
                 ret.setRetCode(-2)
@@ -93,7 +98,7 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
             val allNC = (network.directNodeByBcuid.size +
               network.pendingNodeByBcuid.size)
             if (pbo.getNodeCount >= allNC * 2 / 3
-                && (pbo.getNodeNotifiedCount >= pbo.getNodeCount - 1 )) {
+              && (pbo.getNodeNotifiedCount >= pbo.getNodeCount - 1)) {
               log.debug("start join network and vote")
               network.voteNodeMap.runOnce();
             } else {

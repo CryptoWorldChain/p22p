@@ -136,7 +136,7 @@ object PNode {
 
   def genIdx(newidx: Int = -1): Int = {
     var currentidx: Int = newidx
-    if (currentidx == -1) {
+    while (currentidx <= 0) {
       currentidx = (Math.abs(Math.random() * 100000 % prop.get("otrans.node.max_nodes", 256))).asInstanceOf[Int];
     }
     val d = prop.get("otrans.node.idx", "" + currentidx);
@@ -189,7 +189,8 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
   def v_address(): String = if (StringUtils.isBlank(_v_address)) _net_bcuid else _v_address;
   def try_node_idx(): Int = _try_cnode_idx
 
-  override def changeIdx(idx: Int): Node = ClusterNode(
+  override def changeIdx(idx: Int): Node = {
+    ClusterNode(
     net_id, idx, //node info
     sign, pnodes, counter, //
     startup_time, //
@@ -199,6 +200,7 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
     pri_key,
     uri() //
     )
+ }
 }
 
 object ClusterNode {

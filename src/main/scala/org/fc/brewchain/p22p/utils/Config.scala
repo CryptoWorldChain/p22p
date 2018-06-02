@@ -25,6 +25,9 @@ object Config {
   val NUM_VIEWS_EACH_SNAPSHOT = prop.get(PROP_DOMAIN + "num.views.each.snapshot", 10); //每快照有几个
   val TIMEOUT_MS_MESSAGE = prop.get(PROP_DOMAIN + "timeout.ms.message", 60*1000); //每快照有几个
 
+  
+    val HB_FAILED_COUNT = prop.get(PROP_DOMAIN + "hb.failed.count", 3); //每快照有几个
+
   val STR_REJECT = "__REJECT";
 
   def VOTE_DEBUG: Boolean = {
