@@ -158,7 +158,6 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
       } while (rootnode.node_idx == v || test_bits.testBit(v))
 
       Daos.odb.putInfo(NODE_ID_PROP, String.valueOf(v))
-      
 
       if (rootnode.isInstanceOf[ClusterNode]) {
         log.debug("new clusternode");
@@ -169,7 +168,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
           pnodes = oldrootnode.pnodes,
           _net_bcuid = newnode.bcuid,
           _try_cnode_idx = newnode.try_node_idx);
-      }else{
+      } else {
         rootnode = newNode(v);
       }
 
@@ -177,6 +176,22 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
       MDCSetBCUID(root().bcuid)
       log.debug("changeNode Index=" + v)
       v
+    }
+  }
+
+  def changeNodeVAddr(newaddr: String): Node = {
+    this.synchronized {
+      if (!StringUtils.equals(newaddr, rootnode.v_address)) {
+        rootnode = rootnode.changeVaddr(newaddr)
+        syncInfo(rootnode)
+        MDCSetBCUID(root().bcuid)
+        log.debug("changeNode VAddr=" + newaddr)
+      }else{
+        MDCSetBCUID(root().bcuid)
+        log.debug("same node vAddr=" + newaddr)
+      }
+      
+      rootnode
     }
   }
 

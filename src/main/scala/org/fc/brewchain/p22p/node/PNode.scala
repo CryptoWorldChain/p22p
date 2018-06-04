@@ -30,13 +30,14 @@ import org.fc.brewchain.p22p.Daos
 sealed trait Node {
   def processMessage(gcmd: String, body: Either[Message, ByteString])(implicit network: Network): Unit
   def changeIdx(idx: Int): Node;
+  def changeVaddr(vaddr: String): Node ;
   def name: String
   def node_idx: Int;
   def bcuid: String;
   def pub_key: String;
   def pri_key: String;
   def v_address: String;
-  def counter: CCSet;
+  def counter: CCSet; 
   def startup_time: Long;
   def sign: String;
   def uri: String;
@@ -88,15 +89,26 @@ case class PNode(_name: String, _node_idx: Int, //node info
     bcuid,
     pri_key,
     v_address)
+ 
+  override def changeVaddr(vaddr: String): Node = PNode.signNode(
+    name, node_idx, //node info
+    uri, //
+    startup_time, //
+    pub_key, //
+    counter,
+    try_node_idx,
+    bcuid,
+    pri_key,
+    vaddr)
 }
 
 object PNode {
-  def fromURL(url: String,netid:String): PNode = {
+  def fromURL(url: String, netid: String): PNode = {
     val u = new URL(url);
     val n = new PNode(_name = u.getHost, _node_idx = 0, "", _uri = u.toString(),
-      _bcuid = Base64.encodeBase64URLSafeString((url+"?netid="+netid).getBytes),
+      _bcuid = Base64.encodeBase64URLSafeString((url + "?netid=" + netid).getBytes),
       _pub_key = "")
-//println("pNode.fromURL="+n._bcuid);    
+    //println("pNode.fromURL="+n._bcuid);    
     n
   }
 
@@ -112,7 +124,7 @@ object PNode {
     pri_key: String = null,
     v_address: String): PNode = {
     if (pri_key != null) {
-      PNode(name, node_idx, Daos.enc.ecSignHex(pri_key, Array(node_idx, uri, bcuid).mkString("|").getBytes),
+      PNode(name, node_idx, Daos.enc.ecSignHex(pri_key, Array(node_idx, bcuid, v_address).mkString("|").getBytes),
         uri, //
         startup_time, //
         pub_key, //
@@ -191,16 +203,42 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
 
   override def changeIdx(idx: Int): Node = {
     ClusterNode(
-    net_id, idx, //node info
-    sign, pnodes, counter, //
-    startup_time, //
-    idx,
-    bcuid,
-    pub_key,
-    pri_key,
-    uri() //
-    )
- }
+      net_id, idx, //node info
+      if(pri_key!=null)
+      {
+        Daos.enc.ecSignHex(pri_key, Array(idx, bcuid, v_address).mkString("|").getBytes) //
+      }else{
+        sign
+      }
+      , pnodes, counter,
+      startup_time, //
+      idx,
+      bcuid,
+      pub_key,
+      pri_key,
+      v_address(),
+      uri() //
+      )
+  }
+  override def changeVaddr(vaddr: String): Node = {
+    ClusterNode(
+      net_id, node_idx, //node info
+      if(pri_key!=null)
+      {
+        Daos.enc.ecSignHex(pri_key, Array(node_idx, bcuid, vaddr).mkString("|").getBytes) //
+      }else{
+        sign
+      }
+      , pnodes, counter, //
+      startup_time, //
+      node_idx(),
+      bcuid,
+      pub_key,
+      pri_key,
+      vaddr,
+      uri() //
+      )
+  }
 }
 
 object ClusterNode {
