@@ -33,7 +33,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner with BitMap {
   def getName() = "VoteNodeMap"
   val checking = new AtomicBoolean(false)
-
   def runOnce() = {
     log.debug("VoteNodeMap :Run----Try to Vote Node Maps");
     val oldThreadName = Thread.currentThread().getName + ""
@@ -55,6 +54,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
             network.joinNetwork.pendingJoinNodes.size() + ": Online=" + network.onlineMap.size)
           //for fast load
         } else if (network.stateStorage.nextV(vbase) > 0) {
+          
           vbase.setMessageUid(UUIDGenerator.generate())
           vbase.setOriginBcuid(network.root().bcuid)
           vbase.setFromBcuid(network.root().bcuid);
@@ -80,7 +80,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
           //      vbase.addVoteContents(Any.pack(vbody.build()))
           //      if (network.node_bits.bitCount <= 0) {
           //        log.debug("networks has not directnode!")
-          log.info("vote -- Nodes:" + vbody.getNodeBitsEnc + ",pendings=" + vbody.getPendingBitsEnc);
+          log.debug("vote -- Nodes:" + vbody.getNodeBitsEnc + ",pendings=" + vbody.getPendingBitsEnc);
           vbase.setV(vbase.getV);
           vbase.setN(network.pendingNodes.size + network.directNodes.size);
           if (vbase.getN > 0) {

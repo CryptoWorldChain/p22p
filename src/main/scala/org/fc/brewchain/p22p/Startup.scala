@@ -28,10 +28,7 @@ class Startup extends PSMPZP[Message] {
   def init() {
 
     //    System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.url");
-    log.debug("startup:");
     new Thread(new PZPBGLoader()).start()
-
-    log.debug("tasks inited....[OK]");
   }
 
   @Invalidate
