@@ -8,7 +8,7 @@ import java.net.URL
 
 object VoteTest {
   def main(args: Array[String]): Unit = {
-    val l = List("a", "a", "a")
+    val l = List("a", "a", "a","b")
     println("pbft.vote=" + l.PBFTVote(f => Some(f), 5));
     println("rcpt.vote=" + l.RCPTVote().decision);
     println("rcpt.vote=" + l.precentVote(0.6F).decision);

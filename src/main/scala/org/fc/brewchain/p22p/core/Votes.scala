@@ -14,7 +14,6 @@ object Votes {
   sealed abstract class VoteResult {
     def decision: Any
   }
-
   case class Converge(major: Any) extends VoteResult {
     override def decision = major
   }

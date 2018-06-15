@@ -116,10 +116,17 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         //        log.debug("pendingNode exists PendingNodes bcuid=" + node.bcuid);
         false
       } else {
-
-        pendingNodeByBcuid.put(node.bcuid, node);
-        log.debug("addpending:" + pendingNodeByBcuid.size + ",p=" + node.bcuid)
-        true
+        val sameuri = pendingNodeByBcuid.filter(p => {
+          p._2.uri.equals(node.uri)
+        })
+        if (sameuri.size > 0) {
+          log.debug("sameuri:" + sameuri);
+          false
+        } else {
+          pendingNodeByBcuid.put(node.bcuid, node);
+          log.debug("addpending:" + pendingNodeByBcuid.size + ",p=" + node.bcuid)
+          true
+        }
       }
     }
   }
@@ -240,7 +247,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
   //
   val joinNetwork = JoinNetwork(this, nodelist.split(",").map { x =>
     log.debug("x=" + x)
-    PNode.fromURL(x,this.netid);
+    PNode.fromURL(x, this.netid);
   });
   val stateStorage = StateStorage(this);
   val voteQueue = VoteQueue(this);
@@ -258,8 +265,8 @@ object Networks extends NActor with LogHelper {
   //  val raft: Network = new Network("raft","tcp://127.0.0.1:5100");
   val netsByID = new HashMap[String, Network]();
 
-  val instanceid = "NET_"+UUIDGenerator.generate();
-  
+  val instanceid = "NET_" + UUIDGenerator.generate();
+
   def networkByID(netid: String): Network = {
     netsByID.get(netid);
   }

@@ -105,14 +105,6 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
               log.debug("cannot start join network and vote:NC=" + pbo.getNodeCount + ",all=" + allNC)
             }
 
-            //            try {
-            //              VoteWorker.synchronized {
-            //                log.debug("notify to wote");
-            //                VoteWorker.notifyAll()
-            //              }
-            //            } finally {
-            //
-            //            }
           }
         } else if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
           //        NodeInstance.curnode.addPendingNode(new LinkNode(from.getProtocol, from.getNodeName, from.getAddress, // 
