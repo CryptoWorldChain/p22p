@@ -31,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.collection.mutable.Map
 import java.util.concurrent.atomic.AtomicInteger
 import org.fc.brewchain.p22p.utils.Config
+import java.util.concurrent.CountDownLatch
 
 //投票决定当前的节点
 case class CheckingHealthy(network: Network) extends SRunner {
@@ -44,14 +45,18 @@ case class CheckingHealthy(network: Network) extends SRunner {
         val pack = PSNodeInfo.newBuilder().setNode(toPMNode(network.root()))
           .setNid(network.netid).build()
         implicit val _net = network
-        network.pendingNodes.filter { _.bcuid != network.root().bcuid }.map { n =>
+        val pn = network.pendingNodes.filter { _.bcuid != network.root().bcuid }
+        val dn = network.directNodes.filter { _.bcuid != network.root().bcuid }
+        val cdl = new CountDownLatch(pn.size + dn.size);
+        pn.map { n =>
           log.debug("checking Health to pending@" + n.bcuid + ",uri=" + n.uri)
-          MessageSender.sendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
+          MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
             def onSuccess(fp: FramePacket) = {
+              cdl.countDown()
               log.debug("send HBTPZP success:to " + n.uri + ",body=" + fp.getBody)
               failedChecking.remove(n.bcuid)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
-              
+
               //          log.debug("get nodes:" + retpack);
               if (retpack.getCurrent == null) {
                 log.debug("Node EROR NotFOUND:" + retpack);
@@ -72,6 +77,7 @@ case class CheckingHealthy(network: Network) extends SRunner {
               }
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
+              cdl.countDown()
               log.debug("send HBTPZP ERROR " + n.uri + ",e=" + e.getMessage, e)
               failedChecking.get(n.bcuid) match {
                 case Some(cc) =>
@@ -88,11 +94,13 @@ case class CheckingHealthy(network: Network) extends SRunner {
             }
           });
         }
-        network.directNodes.filter { _.bcuid != network.root().bcuid }.map { n =>
 
+        dn.map { n =>
+          
           log.debug("checking Health to directs@" + n.bcuid + ",uri=" + n.uri)
-          MessageSender.sendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
+          MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
             def onSuccess(fp: FramePacket) = {
+              cdl.countDown()
               log.debug("send HBTPZP Direct success:to " + n.uri + ",body=" + fp.getBody)
               network.onlineMap.put(n.bcuid, n);
               failedChecking.remove(n.bcuid)
@@ -109,6 +117,7 @@ case class CheckingHealthy(network: Network) extends SRunner {
               }
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
+              cdl.countDown()
               log.debug("send HBTPZP Direct ERROR " + n.uri + ",e=" + e.getMessage, e)
               failedChecking.get(n.bcuid) match {
                 case Some(cc) =>
@@ -125,6 +134,13 @@ case class CheckingHealthy(network: Network) extends SRunner {
             }
 
           });
+          
+          try{
+            cdl.await(Math.min(Config.TICK_CHECK_HEALTHY,60), TimeUnit.SECONDS)
+          }catch{
+            case t:Throwable =>
+              log.debug("checking Health wait error:"+t.getMessage,t);
+          }
         }
       } finally {
         checking.compareAndSet(true, false);
