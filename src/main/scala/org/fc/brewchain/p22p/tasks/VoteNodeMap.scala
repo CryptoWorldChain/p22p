@@ -28,9 +28,10 @@ import org.fc.brewchain.p22p.utils.Config
 import org.fc.brewchain.p22p.pbft.VoteQueue
 import org.fc.brewchain.p22p.node.Network
 import java.util.concurrent.atomic.AtomicBoolean
+import org.brewchain.bcapi.exec.SRunner
 
 //投票决定当前的节点
-case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner with BitMap {
+case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner with PMNodeHelper with BitMap {
   def getName() = "VoteNodeMap"
   val checking = new AtomicBoolean(false)
   def runOnce() = {

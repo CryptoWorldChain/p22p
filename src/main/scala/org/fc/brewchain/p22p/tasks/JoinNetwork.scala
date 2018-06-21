@@ -30,9 +30,10 @@ import org.fc.brewchain.p22p.node.Network
 import sun.rmi.log.LogHandler
 import org.fc.brewchain.p22p.utils.LogHelper
 import java.util.concurrent.CountDownLatch
+import org.brewchain.bcapi.exec.SRunner
 
 //投票决定当前的节点
-case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends SRunner with LogHelper {
+case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends SRunner  with PMNodeHelper with LogHelper {
   def getName() = "JoinNetwork"
   val sameNodes = new HashMap[Integer, PNode]();
   val pendingJoinNodes = new ConcurrentHashMap[String, PNode]();

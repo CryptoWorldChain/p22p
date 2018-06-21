@@ -32,9 +32,10 @@ import scala.collection.mutable.Map
 import java.util.concurrent.atomic.AtomicInteger
 import org.fc.brewchain.p22p.utils.Config
 import java.util.concurrent.CountDownLatch
+import org.brewchain.bcapi.exec.SRunner
 
 //投票决定当前的节点
-case class CheckingHealthy(network: Network) extends SRunner {
+case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
   def getName() = "CheckingHealthy"
   val checking = new AtomicBoolean(false)
   val failedChecking = Map[String, AtomicInteger]();

@@ -26,15 +26,16 @@ import onight.tfw.mservice.NodeHelper
 import org.fc.brewchain.p22p.utils.Config
 import org.apache.commons.codec.binary.Base64
 import org.fc.brewchain.p22p.utils.LogHelper
-import org.fc.brewchain.p22p.tasks.SRunner
 import org.fc.brewchain.p22p.core.MessageSender
 import org.fc.brewchain.p22p.node.Networks
 import onight.tfw.outils.serialize.UUIDGenerator
 import org.fc.brewchain.p22p.pbgens.P22P.PBVoteViewChange
 import org.fc.brewchain.p22p.node.Network
 import java.util.concurrent.LinkedBlockingQueue
+import org.brewchain.bcapi.exec.SRunner
+import org.fc.brewchain.p22p.action.PMNodeHelper
 
-case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner with LogHelper {
+case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner with LogHelper with PMNodeHelper {
 
   def getName() = "VoteWorker"
 
