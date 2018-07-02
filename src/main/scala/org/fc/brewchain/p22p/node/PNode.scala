@@ -88,7 +88,7 @@ case class PNode(_name: String, _node_idx: Int, //node info
     try_node_idx,
     bcuid,
     pri_key,
-    v_address)
+    v_address,sign)
  
   override def changeVaddr(vaddr: String): Node = PNode.signNode(
     name, node_idx, //node info
@@ -122,8 +122,10 @@ object PNode {
     try_node_idx: Int = 0,
     bcuid: String = UUIDGenerator.generate(),
     pri_key: String = null,
-    v_address: String): PNode = {
-    if (pri_key != null) {
+    v_address: String,
+    signed:String = ""
+  ): PNode = {
+    if (StringUtils.isNotBlank(pri_key)) {
       PNode(name, node_idx, Daos.enc.ecSignHex(pri_key, Array(node_idx, bcuid, v_address).mkString("|").getBytes),
         uri, //
         startup_time, //
@@ -133,7 +135,7 @@ object PNode {
         bcuid,
         pri_key, v_address)
     } else {
-      PNode(name, node_idx, null,
+      PNode(name, node_idx, signed,
         uri, //
         startup_time, //
         pub_key, //
@@ -204,8 +206,7 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
   override def changeIdx(idx: Int): Node = {
     ClusterNode(
       net_id, idx, //node info
-      if(pri_key!=null)
-      {
+      if (StringUtils.isNotBlank(pri_key)) {
         Daos.enc.ecSignHex(pri_key, Array(idx, bcuid, v_address).mkString("|").getBytes) //
       }else{
         sign
@@ -218,6 +219,7 @@ case class ClusterNode(net_id: String, cnode_idx: Int, //node info
       pri_key,
       v_address(),
       uri() //
+      
       )
   }
   override def changeVaddr(vaddr: String): Node = {

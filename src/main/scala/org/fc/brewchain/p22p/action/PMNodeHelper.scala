@@ -31,11 +31,14 @@ trait PMNodeHelper {
   }
 
   def toFullPMNode(n: Node): PMNodeInfo.Builder = {
-    PMNodeInfo.newBuilder().setUri(n.uri).setNodeName(n.name)
-      .setSign(n.sign)
+    val pm=PMNodeInfo.newBuilder().setUri(n.uri).setNodeName(n.name)
       .setPubKey(n.pub_key).setStartupTime(n.startup_time).setTryNodeIdx(n.try_node_idx).setBcuid(n.bcuid)
       .setPriKey(n.pri_key).setNodeIdx(n.node_idx)
       .setSendCc(n.counter.send.get).setRecvCc(n.counter.recv.get).setBlockCc(n.counter.blocks.get)
+    if(n.sign!=null){
+      pm.setSign(n.sign)
+    }
+    pm;
   }
   val pser = SerializerFactory.getSerializer(SerializerFactory.SERIALIZER_PROTOBUF)
 
