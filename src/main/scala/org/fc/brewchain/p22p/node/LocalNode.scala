@@ -32,6 +32,11 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
     node == root || root.bcuid.equals(node.bcuid)
   }
 
+  def changeRootName(name: String): Unit = {
+    rootnode = rootnode.changeName(name);
+    syncInfo(rootnode);
+  }
+
   def isLocalNode(bcuid: String): Boolean = {
     root.bcuid.equals(bcuid)
   }
@@ -102,14 +107,16 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
       }
     }
   }
-  def initClusterNode(subnetRoot: Node) = {
+  def initClusterNode(subnetRoot: Node,rootname:String) = {
     this.synchronized {
       initNode();
-      rootnode = ClusterNode(net_id = netid(),
+      rootnode = ClusterNode(net_id = netid(),rootnode.name,
         cnode_idx = -1, _sign = "",
         pnodes = Array(subnetRoot),
         _net_bcuid = rootnode.bcuid,
-        _try_cnode_idx = rootnode.try_node_idx);
+        _try_cnode_idx = if(rootnode.try_node_idx>0)rootnode.try_node_idx else 
+        ClusterNode.genIdx()    
+      );
       if (rootnode == PNode.NoneNode) //second entry
       {
         try {
@@ -141,6 +148,9 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
             log.warn("unknow Error.", e)
         } finally {
           if (root() != null) {
+            if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
+            MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
+          }
             MDCSetBCUID(root().bcuid)
           }
         }
@@ -163,7 +173,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
         log.debug("new clusternode");
         val newnode = newNode(v);
         val oldrootnode = rootnode.asInstanceOf[ClusterNode];
-        rootnode = ClusterNode(net_id = netid(),
+        rootnode = ClusterNode(net_id = netid(),rootnode.name,
           cnode_idx = -1, _sign = "",
           pnodes = oldrootnode.pnodes,
           _net_bcuid = newnode.bcuid,
@@ -186,11 +196,11 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
         syncInfo(rootnode)
         MDCSetBCUID(root().bcuid)
         log.debug("changeNode VAddr=" + newaddr)
-      }else{
+      } else {
         MDCSetBCUID(root().bcuid)
         log.debug("same node vAddr=" + newaddr)
       }
-      
+
       rootnode
     }
   }

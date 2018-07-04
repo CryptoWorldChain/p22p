@@ -27,6 +27,10 @@ import java.util.concurrent.CountDownLatch
 object TestNodeSetPB extends OLog with NodeSetHelper {
 
   def main(args: Array[String]): Unit = {
+    for(i<- 1 to 10){
+      println(i)
+    }
+    println("end")
     val nodeCount = 10
     var bitenc = BigInt(0)
     for (i <- 0 to nodeCount - 1) {

@@ -74,7 +74,7 @@ class PZPBGLoader() extends Runnable with OLog {
         if (subnet != null) {
           if (subnet.root() != PNode.NoneNode) {
             log.debug("cluster ready: " + net.netid + " for startup:" + f._1 + "  ... [OK]");
-            net.initClusterNode(subnet.root());
+            net.initClusterNode(subnet.root(),subnet.root().name);
             net.startup()
             initlist.remove(f._1)
           } else {

@@ -17,7 +17,10 @@ enum PCommand {
 
 	RRR = 6;//消息路由
 	
+	CHN = 7;//change node name
+	
 	HBT = 10;//HeartBeat!检查心跳
+	
 	
 	TTT = 30;//ping,pong,wall ,tesing
 	TTS = 31;//vote string test
@@ -201,6 +204,7 @@ enum TestMessageType{
 	PONG  = 2;
 	
 }
+
 message PSTestMessage{
 	string content = 1;//消息字段
 	TestMessageType type = 2;//
@@ -223,6 +227,20 @@ message PRetTestMessage{
 	int32 pending_count = 4;
 	
 	string bitencs = 5;
+	string nid = 50;//网络ID
+}
+ 
+ 
+
+message PSChangeNodeName{
+	string newname = 1;//消息字段
+	string nid = 50;//网络ID
+}
+
+message PRetChangeNodeName{
+	int32 ret_code = 1;//返回
+	string ret_message = 2;//返回信息
+	string newname = 3;
 	string nid = 50;//网络ID
 }
  

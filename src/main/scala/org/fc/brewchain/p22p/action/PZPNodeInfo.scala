@@ -38,8 +38,7 @@ import onight.tfw.otransio.api.session.CMDService
 @NActorProvider
 @Slf4j
 @Instantiate
-@Provides(specifications = Array(classOf[ActorService], classOf[IActor],classOf[CMDService]
-) )
+@Provides(specifications = Array(classOf[ActorService], classOf[IActor], classOf[CMDService]))
 class PZPNodeInfo extends PSMPZP[PSNodeInfo] {
   override def service = PZPNodeInfoService
 }
@@ -50,7 +49,11 @@ object PZPNodeInfoService extends LogHelper with PBUtils with LService[PSNodeInf
   override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
     log.debug("onPBPacket::" + pbo)
     var ret = PRetNodeInfo.newBuilder();
-    val network = networkByID(pbo.getNid)
+    val network = if (StringUtils.isBlank(pbo.getNid)) 
+    { null }
+    else {
+      networkByID(pbo.getNid)
+    }
     if (network == null) {
       ret.setRetCode(-1).setRetMessage("unknow network:" + pbo.getNid)
       handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))

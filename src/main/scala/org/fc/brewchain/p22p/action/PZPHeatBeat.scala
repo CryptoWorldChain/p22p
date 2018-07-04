@@ -60,14 +60,23 @@ object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] wi
       val pending = network.pendingNodes;
       val directNodes = network.directNodes;
       network.onlineMap.put(pbo.getNode.getBcuid, fromPMNode(pbo.getNode))
+      
       log.debug("pending=" + network.pendingNodes.size + "::" + network.pendingNodes)
       //      ret.addNodes(toPMNode(NodeInstance.curnode));
       pending.map { _pn =>
         log.debug("pending==" + _pn)
+        if(StringUtils.equals(_pn.bcuid,pbo.getNode.getBcuid)&&
+            !StringUtils.equals(_pn.name,pbo.getNode.getNodeName)){
+          network.changePendingNode(_pn.changeName(pbo.getNode.getNodeName));
+        }
         ret.addPnodes(toPMNode(_pn));
       }
       directNodes.map { _pn =>
         log.debug("directnodes==" + _pn)
+        if(StringUtils.equals(_pn.bcuid,pbo.getNode.getBcuid)&&
+            !StringUtils.equals(_pn.name,pbo.getNode.getNodeName)){
+          network.changeDirectNode(_pn.changeName(pbo.getNode.getNodeName));
+        }
         ret.addDnodes(toPMNode(_pn));
       }
       ret.setBitEncs(network.node_strBits);

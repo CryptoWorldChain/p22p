@@ -106,7 +106,28 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
     }
   }
   //  var node_idx = _node_idx; //全网确定之后的节点id
-
+  def changePendingNode(node: Node): Boolean = {
+    this.synchronized {
+      if (pendingNodeByBcuid.contains(node.bcuid)) {
+        pendingNodeByBcuid.put(node.bcuid, node);
+        log.debug("update pending:" + pendingNodeByBcuid.size + ",p=" + node.bcuid)
+        true
+      }else{
+        false
+      }
+    }
+  }
+  def changeDirectNode(node: Node): Boolean = {
+    this.synchronized {
+      if (directNodeByBcuid.contains(node.bcuid)) {
+        directNodeByBcuid.put(node.bcuid, node);
+        log.debug("update directnode:" + directNodeByBcuid.size + ",p=" + node.bcuid)
+        true
+      }else{
+        false
+      }
+    }
+  }
   def addPendingNode(node: Node): Boolean = {
     this.synchronized {
       if (directNodeByBcuid.contains(node.bcuid)) {
