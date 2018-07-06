@@ -62,6 +62,7 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         MDCSetBCUID(network)
         //       pbo.getMyInfo.getNodeName
         val from = pbo.getMyInfo;
+//        log.debug("verify Message=="+MessageSender.verifyMessage(pack)(network));
         ret.setMyInfo(toPMNode(network.root))
         if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
           System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
@@ -128,12 +129,12 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         }
         case e: FBSException => {
           ret.clear()
-          ret.setRetCode(-2).setRetMessage(e.getMessage)
+          ret.setRetCode(-2).setRetMessage(""+e.getMessage)
         }
         case t: Throwable => {
           log.error("error:", t);
           ret.clear()
-          ret.setRetCode(-3).setRetMessage(t.getMessage)
+          ret.setRetCode(-3).setRetMessage(""+t.getMessage)
         }
       } finally {
         handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))

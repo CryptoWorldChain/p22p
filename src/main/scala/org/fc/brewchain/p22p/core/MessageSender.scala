@@ -27,6 +27,8 @@ import org.apache.felix.ipojo.annotations.Provides
 import onight.tfw.otransio.api.PSenderService
 import onight.tfw.ntrans.api.ActorService
 import org.fc.brewchain.p22p.utils.Config
+import onight.tfw.ntrans.api.annotation.ActorRequire
+import org.fc.brewchain.bcapi.EncAPI
 
 @NActorProvider
 @Provides(specifications = Array(classOf[ActorService], classOf[PSenderService]))
@@ -43,10 +45,23 @@ class CMessageSender extends NActor {
   def getSockSender(): IPacketSender = {
     sockSender
   }
+  @ActorRequire(name = "bc_encoder", scope = "global")
+  var encApi: EncAPI = null;
+  def setEncApi(ecapi: EncAPI): Unit = {
+    encApi = ecapi;
+    MessageSender.encApi = ecapi;
+  }
+  def getEncApi(): EncAPI = {
+    encApi
+  }
 }
 
 object MessageSender extends OLog {
   var sockSender: IPacketSender = new NonePackSender();
+
+  val PACK_SIGN = "_s";
+  var encApi: EncAPI = null;
+
   def appendUid(pack: BCPacket, node: Node)(implicit network: Network): Unit = {
     if (network.isLocalNode(node)) {
       pack.getExtHead.remove(PackHeader.PACK_TO);
@@ -54,7 +69,56 @@ object MessageSender extends OLog {
       pack.putHeader(PackHeader.PACK_TO, node.bcuid);
       pack.putHeader(PackHeader.PACK_URI, node.uri);
     }
+    if (!pack.isBodySigned()) {
+      val bb = pack.genBodyBytes()
+      val shabb = encApi.sha256Encode(bb);
+      val signm = encApi.ecSignHex(network.root().pri_key, shabb)
+      pack.putHeader(PACK_SIGN, signm);
+      pack.setBodySigned(true);
+    }
     pack.putHeader(PackHeader.PACK_FROM, network.root().bcuid);
+  }
+
+  def verifyMessage(pack: FramePacket): Option[Boolean] = {
+    val fromuid = pack.getExtStrProp(PackHeader.PACK_FROM)
+    if (StringUtils.isNotBlank(fromuid)) {
+      val net = if (fromuid.startsWith("D")) {
+        Networks.networkByID("dpos")
+      } else if (fromuid.startsWith("R")) {
+        Networks.networkByID("raft")
+      } else {
+        null
+      }
+      if (net != null) {
+        val node = net.nodeByBcuid(fromuid)
+        pack.getExtStrProp(PACK_SIGN) match {
+          case n if StringUtils.isNotBlank(n) && n.length() >= 128 =>
+            val pubkey = n.substring(0, 128);
+            if (node==net.noneNode||StringUtils.equals(pubkey, node.pub_key)) {
+              val bb = pack.getBody;
+              val shabb = encApi.sha256Encode(bb);
+              val result = encApi.ecVerifyHex(pubkey, shabb, n);
+              if (!result) {
+                log.debug(fromuid+"messageverify error:" + pack.getExtHead + ",sign=" +
+                  pack.getExtStrProp(MessageSender.PACK_SIGN) + ",sha=" + encApi.hexEnc(shabb))
+              }
+              Some(result);
+            } else {
+              log.debug(fromuid+"messageverify error:fatal:" + pack.getExtHead + ",sign=" +
+                pack.getExtStrProp(MessageSender.PACK_SIGN) + ",pubkey not equal:" +
+                pubkey + ",nodepubkey=" + node.pub_key)
+              Some(false);
+            }
+          case _ =>
+            None
+        }
+      } else {
+        None
+      }
+    } else {
+      None
+    }
+
   }
 
   def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket])(implicit network: Network) {

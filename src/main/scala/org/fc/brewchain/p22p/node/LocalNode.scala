@@ -107,16 +107,18 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
       }
     }
   }
-  def initClusterNode(subnetRoot: Node,rootname:String) = {
+  def initClusterNode(subnetRoot: Node, rootname: String) = {
     this.synchronized {
       initNode();
-      rootnode = ClusterNode(net_id = netid(),rootnode.name,
+      rootnode = ClusterNode(net_id = netid(), rootnode.name,
         cnode_idx = -1, _sign = "",
         pnodes = Array(subnetRoot),
         _net_bcuid = rootnode.bcuid,
-        _try_cnode_idx = if(rootnode.try_node_idx>0)rootnode.try_node_idx else 
-        ClusterNode.genIdx()    
-      );
+        _try_cnode_idx = if (rootnode.try_node_idx > 0) rootnode.try_node_idx else
+          ClusterNode.genIdx(),
+        _pub_key = rootnode.pub_key,
+        _pri_key = rootnode.pri_key
+        ).signNode();
       if (rootnode == PNode.NoneNode) //second entry
       {
         try {
@@ -149,8 +151,8 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
         } finally {
           if (root() != null) {
             if (MessageSender.sockSender != null && rootnode != null && rootnode.bcuid != null) {
-            MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
-          }
+              MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
+            }
             MDCSetBCUID(root().bcuid)
           }
         }
@@ -158,7 +160,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
     }
   }
   def resetRoot(node: Node): Unit = {
-    this.rootnode = node;
+    this.rootnode = rootnode.changeIdx(node.node_idx).changeName(node.name);
   }
   def changeNodeIdx(test_bits: BigInt = BigInt("0")): Int = {
     this.synchronized {
@@ -173,11 +175,14 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
         log.debug("new clusternode");
         val newnode = newNode(v);
         val oldrootnode = rootnode.asInstanceOf[ClusterNode];
-        rootnode = ClusterNode(net_id = netid(),rootnode.name,
-          cnode_idx = -1, _sign = "",
+        rootnode = ClusterNode(net_id = netid(), rootnode.name,
+          cnode_idx = -1, _sign = newnode.sign(),
           pnodes = oldrootnode.pnodes,
           _net_bcuid = newnode.bcuid,
-          _try_cnode_idx = newnode.try_node_idx);
+          _try_cnode_idx = newnode.try_node_idx,
+          _pub_key=newnode.pub_key(),
+          _pri_key=newnode.pri_key()
+        );
       } else {
         rootnode = newNode(v);
       }

@@ -41,16 +41,17 @@ class Startup extends PSMPZP[Message] {
 class PZPBGLoader() extends Runnable with OLog {
   def run() = {
     URLHelper.init();
-    while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]) {
-      log.debug("Daos Or sockSender Not Ready..:enc=" + Daos.enc + ",sender=" + MessageSender.sockSender
-        + ",daoready=" + Daos.isDbReady() )
-//      if (Daos.odb != null) {
-//        log.debug(":odb.getDaosupport=" + Daos.odb.getDaosupport)
-//        if (Daos.odb.getDaosupport != null) {
-//          log.debug(":odb.getDaosupport.getDaosupport=" + Daos.odb.getDaosupport.getDaosupport)
-//        }
-//
-//      }
+    while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]
+      || MessageSender.encApi == null) {
+      log.debug("Daos Or sockSender or encApi Not Ready..:enc=" + Daos.enc + ",sender=" + MessageSender.sockSender
+        + ",daoready=" + Daos.isDbReady() + ",encapi=" + MessageSender.encApi)
+      //      if (Daos.odb != null) {
+      //        log.debug(":odb.getDaosupport=" + Daos.odb.getDaosupport)
+      //        if (Daos.odb.getDaosupport != null) {
+      //          log.debug(":odb.getDaosupport.getDaosupport=" + Daos.odb.getDaosupport.getDaosupport)
+      //        }
+      //
+      //      }
       Thread.sleep(1000);
     }
 
@@ -74,7 +75,7 @@ class PZPBGLoader() extends Runnable with OLog {
         if (subnet != null) {
           if (subnet.root() != PNode.NoneNode) {
             log.debug("cluster ready: " + net.netid + " for startup:" + f._1 + "  ... [OK]");
-            net.initClusterNode(subnet.root(),subnet.root().name);
+            net.initClusterNode(subnet.root(), subnet.root().name);
             net.startup()
             initlist.remove(f._1)
           } else {

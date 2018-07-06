@@ -109,10 +109,13 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
               log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
               if (retpack.getCurrent == null) {
                 log.debug("Node EROR NotFOUND:" + retpack);
+                network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                 network.removeDNode(n);
               } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
                 log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
+                network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                 network.removeDNode(n);
+
               } else {
                 retpack.getPnodesList.map { pn =>
                   network.addPendingNode(fromPMNode(pn));

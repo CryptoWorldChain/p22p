@@ -137,7 +137,7 @@ object PNode {
     v_address: String,
     signed: String = ""): PNode = {
     if (StringUtils.isNotBlank(pri_key)) {
-      PNode(name, node_idx, Daos.enc.ecSignHex(pri_key, Array(node_idx, bcuid, v_address).mkString("|").getBytes),
+      PNode(name, node_idx, Daos.enc.ecSignHex(pri_key, Array(bcuid, v_address).mkString("|").getBytes),
         uri, //
         startup_time, //
         pub_key, //
@@ -175,8 +175,9 @@ object PNode {
   }
 }
 
-case class ClusterNode(net_id: String,root_name:String, cnode_idx: Int, //node info
+case class ClusterNode(net_id: String, root_name: String, cnode_idx: Int, //node info
     _sign: String = "",
+
     pnodes: Array[Node],
     _counter: CCSet = CCSet(),
     _startup_time: Long = System.currentTimeMillis(),
@@ -195,7 +196,7 @@ case class ClusterNode(net_id: String,root_name:String, cnode_idx: Int, //node i
   }
 
   override def toString(): String = {
-    "ClusterNode(" + net_id+"," +root_name+ "," + startup_time + "," + cnode_idx + "," + sign + ")@" + this.hashCode()
+    "ClusterNode(" + net_id + "," + root_name + "," + startup_time + "," + cnode_idx + "," + sign + ")@" + this.hashCode()
   }
 
   def uri(): String = pnodes.foldLeft("")((A, n) => A + n.uri + ",");
@@ -214,9 +215,25 @@ case class ClusterNode(net_id: String,root_name:String, cnode_idx: Int, //node i
   def v_address(): String = if (StringUtils.isBlank(_v_address)) _net_bcuid else _v_address;
   def try_node_idx(): Int = _try_cnode_idx
 
+  def signNode(): ClusterNode =
+    ClusterNode(
+      net_id, root_name, node_idx, //node info
+      if (StringUtils.isNotBlank(pri_key)) {
+        Daos.enc.ecSignHex(pri_key, Array(bcuid, v_address).mkString("|").getBytes) //
+      } else {
+        sign
+      }, pnodes, counter,
+      startup_time, //
+      try_node_idx,
+      bcuid,
+      pub_key,
+      pri_key,
+      v_address(),
+      uri() //
+      )
   override def changeIdx(idx: Int): Node = {
     ClusterNode(
-      net_id, root_name,idx, //node info
+      net_id, root_name, idx, //node info
       if (StringUtils.isNotBlank(pri_key)) {
         Daos.enc.ecSignHex(pri_key, Array(idx, bcuid, v_address).mkString("|").getBytes) //
       } else {
@@ -233,7 +250,7 @@ case class ClusterNode(net_id: String,root_name:String, cnode_idx: Int, //node i
   }
   override def changeVaddr(vaddr: String): Node = {
     ClusterNode(
-      net_id, root_name,node_idx, //node info
+      net_id, root_name, node_idx, //node info
       if (pri_key != null) {
         Daos.enc.ecSignHex(pri_key, Array(node_idx, bcuid, vaddr).mkString("|").getBytes) //
       } else {
@@ -248,10 +265,10 @@ case class ClusterNode(net_id: String,root_name:String, cnode_idx: Int, //node i
       uri() //
       )
   }
-  
+
   override def changeName(name: String): Node = {
     ClusterNode(
-      net_id,name, node_idx, //node info
+      net_id, name, node_idx, //node info
       if (StringUtils.isNotEmpty(pri_key)) {
         Daos.enc.ecSignHex(pri_key, Array(node_idx, bcuid, v_address).mkString("|").getBytes) //
       } else {
@@ -286,6 +303,7 @@ object ClusterNode {
         currentidx
     }
   }
+
 }
 
 
