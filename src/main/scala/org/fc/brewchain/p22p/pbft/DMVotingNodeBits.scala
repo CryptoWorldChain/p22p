@@ -19,8 +19,8 @@ import org.fc.brewchain.bcapi.crypto.BitMap
 import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.p22p.node.Network
 
-object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap{
-  def makeDecision(network: Network,pbo: PVBase, reallist: List[OPair]): Option[String] = {
+object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap {
+  def makeDecision(network: Network, pbo: PVBase, reallist: List[OPair]): Option[String] = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
     log.debug("makeDecision NodeBits:F=" + pbo.getFromBcuid + ",R=" + vb.getNodeBitsEnc + ",S=" + pbo.getState
       + ",V=" + pbo.getV + ",J=" + pbo.getRejectState);
@@ -48,8 +48,10 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap{
         totalbits = totalbits.clearBit(pn.try_node_idx)
       }
       log.debug("totalbits::" + oldtotalbits.toString(16) + "-->" + totalbits.toString(16)
-        + ":pbpendinCount=" + vb.getPendingNodesCount + ":" + vb.getNodeBitsEnc
-        + ":pendingInList::" + pendingInList.foldLeft(",")((A, p) => A + p.getBcuid + ","))
+        + ":pbpendinCount=" + vb.getPendingNodesCount
+        + ":pbInListCount=" + pendingInList.size + ":" + vb.getNodeBitsEnc
+        + ":tb=" + totalbits.bitCount
+        + ":pendingInList::" + pendingInList.foldLeft("")((A, p) => A + p.getBcuid + ","))
 
       //1. check encbits. for direct nodes 
       if (pendingInList.size == vb.getPendingNodesCount
@@ -61,7 +63,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap{
       }
     }
   }
-  def finalConverge(network: Network,pbo: PVBase): Unit = {
+  def finalConverge(network: Network, pbo: PVBase): Unit = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
     log.debug("FinalConverge! for DMVotingNodeBits:F=" + pbo.getFromBcuid + ",Result=" + vb.getNodeBitsEnc);
 
