@@ -47,9 +47,9 @@ class PZPNodeInfo extends PSMPZP[PSNodeInfo] {
 // http://localhost:8000/fbs/xdn/pbget.do?bd=
 object PZPNodeInfoService extends LogHelper with PBUtils with LService[PSNodeInfo] with PMNodeHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
-    log.debug("onPBPacket::" + pbo)
+//    log.debug("onPBPacket::" + pbo)
     var ret = PRetNodeInfo.newBuilder();
-    val network = if (StringUtils.isBlank(pbo.getNid)) 
+    val network = if (pbo==null||StringUtils.isBlank(pbo.getNid)) 
     { null }
     else {
       networkByID(pbo.getNid)

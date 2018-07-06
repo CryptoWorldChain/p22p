@@ -16,6 +16,7 @@ import com.google.protobuf.ByteString
 import org.brewchain.bcapi.gens.Oentity.OKey
 import org.slf4j.MDC
 import org.fc.brewchain.p22p.utils.LogHelper
+import org.fc.brewchain.p22p.utils.Config
 
 trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   //  val node_name = NodeHelper.getCurrNodeName
@@ -77,8 +78,8 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
           val node_info = getFromDB(PROP_NODE_INFO, "");
           rootnode =
             try {
-              log.info("load node from db info=:" + node_info)
-              val r = if (StringUtils.isBlank(node_info)) {
+              log.info("load node from db info:reset=" + Config.RESET_NODEINFO + ",dbv=" + node_info + ":")
+              val r = if (StringUtils.isBlank(node_info) || Config.RESET_NODEINFO == 1) {
                 newNode(PNode.genIdx());
               } else {
                 deserialize(node_info, "tcp://" + NodeHelper.getCurrNodeListenOutAddr + ":" + NodeHelper.getCurrNodeListenOutPort)
@@ -117,8 +118,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
         _try_cnode_idx = if (rootnode.try_node_idx > 0) rootnode.try_node_idx else
           ClusterNode.genIdx(),
         _pub_key = rootnode.pub_key,
-        _pri_key = rootnode.pri_key
-        ).signNode();
+        _pri_key = rootnode.pri_key).signNode();
       if (rootnode == PNode.NoneNode) //second entry
       {
         try {
@@ -180,9 +180,8 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
           pnodes = oldrootnode.pnodes,
           _net_bcuid = newnode.bcuid,
           _try_cnode_idx = newnode.try_node_idx,
-          _pub_key=newnode.pub_key(),
-          _pri_key=newnode.pri_key()
-        );
+          _pub_key = newnode.pub_key(),
+          _pri_key = newnode.pri_key());
       } else {
         rootnode = newNode(v);
       }
