@@ -53,7 +53,7 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
           hasNewNode = false;
           MDCSetBCUID(network);
           val namedNodes = (statupNodes ++ pendingJoinNodes.values()).filter { x =>
-            !sameNodes.containsKey(x.uri.hashCode()) && !joinedNodes.containsKey(x.uri.hashCode()) && //
+            StringUtils.isNotBlank(x.uri) && !sameNodes.containsKey(x.uri.hashCode()) && !joinedNodes.containsKey(x.uri.hashCode()) && //
               !network.isLocalNode(x)
           };
           val cdl = new CountDownLatch(namedNodes.size);
