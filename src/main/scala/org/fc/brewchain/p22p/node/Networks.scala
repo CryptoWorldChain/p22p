@@ -198,7 +198,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
     }
     pendingNodes.map(n =>
       {
-        log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
+//        log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
         MessageSender.postMessage(gcmd, body, n)(this)
       })
   }
