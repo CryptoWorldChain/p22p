@@ -64,6 +64,11 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         val from = pbo.getMyInfo;
 //        log.debug("verify Message=="+MessageSender.verifyMessage(pack)(network));
         ret.setMyInfo(toPMNode(network.root))
+        if(StringUtils.isBlank(from.getBcuid)||StringUtils.isBlank(from.getPubKey)||
+            StringUtils.isBlank(from.getUri)){
+          log.debug("get empty bcuid");
+          ret.setRetCode(-1).setRetMessage("unknow id");
+        }else
         if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
           System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
           log.debug("getURI:" + from.getUri)
