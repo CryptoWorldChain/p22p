@@ -54,7 +54,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
           MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
             def onSuccess(fp: FramePacket) = {
               cdl.countDown()
-              log.debug("send HBTPZP success:to " + n.uri + ",body=" + fp.getBody)
+              log.debug("send HBTPZP success:to " + n.uri + ",bcuid=" + n.bcuid)
               failedChecking.remove(n.bcuid)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
 
@@ -97,23 +97,31 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
         }
 
         dn.map { n =>
-          
+
           log.debug("checking Health to directs@" + n.bcuid + ",uri=" + n.uri)
           MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
             def onSuccess(fp: FramePacket) = {
               cdl.countDown()
-              log.debug("send HBTPZP Direct success:to " + n.uri + ",body=" + fp.getBody)
+              log.debug("send HBTPZP Direct success:to " + n.uri + ",bcuid=" + n.bcuid)
               network.onlineMap.put(n.bcuid, n);
               failedChecking.remove(n.bcuid)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
               log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
-              retpack.getPnodesList.map { pn =>
-                network.addPendingNode(fromPMNode(pn));
-              }
-              //fix bugs when some node down.2018.3
-              retpack.getDnodesList.map { pn =>
-                if (network.nodeByBcuid(pn.getBcuid) == network.noneNode) {
+              if (retpack.getCurrent == null) {
+                log.debug("Node EROR NotFOUND:" + retpack);
+                network.removeDNode(n);
+              } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
+                log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
+                network.removeDNode(n);
+              } else {
+                retpack.getPnodesList.map { pn =>
                   network.addPendingNode(fromPMNode(pn));
+                }
+                //fix bugs when some node down.2018.3
+                retpack.getDnodesList.map { pn =>
+                  if (network.nodeByBcuid(pn.getBcuid) == network.noneNode) {
+                    network.addPendingNode(fromPMNode(pn));
+                  }
                 }
               }
             }
@@ -135,12 +143,12 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             }
 
           });
-          
-          try{
-            cdl.await(Math.min(Config.TICK_CHECK_HEALTHY,60), TimeUnit.SECONDS)
-          }catch{
-            case t:Throwable =>
-              log.debug("checking Health wait error:"+t.getMessage,t);
+
+          try {
+            cdl.await(Math.min(Config.TICK_CHECK_HEALTHY, 60), TimeUnit.SECONDS)
+          } catch {
+            case t: Throwable =>
+              log.debug("checking Health wait error:" + t.getMessage, t);
           }
         }
       } finally {

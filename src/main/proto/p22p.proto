@@ -39,7 +39,7 @@ message PMNodeInfo{
 	int32 node_idx = 10;//全网确定之后的节点id
 	int64 recv_cc = 11;//总收到多少数据
 	int64 send_cc = 12;//总发送多少数据
-	int64 block_cc = 13;//总产生了多少个区块！
+	int64 block_cc = 13;//总产生了多少个区块
 	
 	string sign = 100;//对上述数据的签名结果
 }
@@ -71,8 +71,16 @@ message PRetJoin{//加入的返回信息
 message PSNodeInfo{//加入
 	string req_token = 1;//是否获取拓扑信息
 	PMNodeInfo node = 2;
+	
+	string dst_bcuid = 3;//用于检查节点信息
+	string dst_sign = 4;
+	string dst_uri = 5;
+	
 	string nid = 50;//网络ID	
 }
+
+
+
 
 message PRetNodeInfo{//加入的返回信息
 	int32 ret_code = 1;//返回
