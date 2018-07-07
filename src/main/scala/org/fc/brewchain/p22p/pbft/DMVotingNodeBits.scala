@@ -18,33 +18,38 @@ import org.fc.brewchain.p22p.action.PMNodeHelper
 import org.fc.brewchain.bcapi.crypto.BitMap
 import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.p22p.node.Network
+import org.fc.brewchain.p22p.utils.LogHelper
 
-object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap {
+object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap with LogHelper{
   def makeDecision(network: Network, pbo: PVBase, reallist: List[OPair]): Option[String] = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
+    MDCSetMessageID(pbo.getMessageUid)
     log.debug("makeDecision NodeBits:F=" + pbo.getFromBcuid + ",R=" + vb.getNodeBitsEnc + ",S=" + pbo.getState
       + ",V=" + pbo.getV + ",J=" + pbo.getRejectState);
     if (pbo.getRejectState == PBFTStage.REJECT) {
       None;
     } else {
+      
       val encbits = mapToBigInt(vb.getNodeBitsEnc);
       val pendingbits = mapToBigInt(vb.getPendingBitsEnc);
       val oldtotalbits = encbits.+(pendingbits);
-      var totalbits = encbits.+(pendingbits);
-
+      var totalbits = encbits;
       val pendingInList = vb.getPendingNodesList.filter { pn =>
         pn.getBcuid.equals(network.root().bcuid) ||
+          network.pendingNodeByBcuid.contains(pn.getBcuid) ||
           network.onlineMap.contains(pn.getBcuid) ||
           network.directNodeByBcuid.contains(pn.getBcuid)
       }
       totalbits = totalbits.clearBit(network.root().try_node_idx)
       network.directNodes.map { pn =>
+        log.debug("directnode idx="+pn.node_idx+",bcuid="+pn.bcuid);
         totalbits = totalbits.clearBit(pn.node_idx)
       }
       network.pendingNodes.map { pn =>
         //      if(!Networks.instance.onlineMap.contains(pn.bcuid)){
         //        log.warn("pending node not online:"+pn.bcuid);
         //      }
+        log.debug("pending tryidx="+pn.try_node_idx+",bcuid="+pn.bcuid);
         totalbits = totalbits.clearBit(pn.try_node_idx)
       }
       log.debug("totalbits::" + oldtotalbits.toString(16) + "-->" + totalbits.toString(16)
@@ -56,6 +61,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap 
       //1. check encbits. for direct nodes 
       if (pendingInList.size == vb.getPendingNodesCount
         && totalbits.bitCount == 0) {
+        log.debug("Make_Decision:"+vb.getNodeBitsEnc+":");
         Some(vb.getNodeBitsEnc)
       } else {
         log.debug("reject for node_bits not equals:")

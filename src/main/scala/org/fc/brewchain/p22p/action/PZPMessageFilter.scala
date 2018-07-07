@@ -26,7 +26,7 @@ class PZPMessageFilter extends SimplePacketFilter with ActorService with PacketF
 
   override def preRoute(actor: ActWrapper, pack: FramePacket, handler: CompleteHandler): Boolean = {
     val v = MessageSender.verifyMessage(pack)
-    log.debug("messageverify:" + v + "," + pack.getCMD + pack.getModule);
+//    log.debug("messageverify:" + v + "," + pack.getCMD + pack.getModule);
 
     v match {
       case Some(result) =>

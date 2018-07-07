@@ -94,6 +94,7 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
                     val newN = fromPMNode(retjoin.getMyInfo)
                     MessageSender.changeNodeName(n.bcuid, newN.bcuid);
                     network.addPendingNode(newN);
+                    network.onlineMap.put(newN.bcuid(), newN)
                     retjoin.getNodesList.map { node =>
                       val pnode = fromPMNode(node);
                       if (network.addPendingNode(pnode)) {

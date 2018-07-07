@@ -29,9 +29,10 @@ import org.fc.brewchain.p22p.pbft.VoteQueue
 import org.fc.brewchain.p22p.node.Network
 import java.util.concurrent.atomic.AtomicBoolean
 import org.brewchain.bcapi.exec.SRunner
+import org.fc.brewchain.p22p.utils.LogHelper
 
 //投票决定当前的节点
-case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner with PMNodeHelper with BitMap {
+case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner with PMNodeHelper with BitMap with LogHelper {
   def getName() = "VoteNodeMap"
   val checking = new AtomicBoolean(false)
   def runOnce() = {
@@ -64,6 +65,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
           val vbody = PBVoteNodeIdx.newBuilder();
           var bits = network.node_bits;
           pendingbits = BigInt(0)
+          MDCSetMessageID(vbase.getMessageUid)
 
           network.pendingNodes.map(n =>
             //          if (network.onlineMap.contains(n.bcuid)) {
@@ -72,11 +74,13 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
             } else { //no pub keys
               pendingbits = pendingbits.setBit(n.try_node_idx);
               vbody.addPendingNodes(toPMNode(n));
+              bits=bits.setBit(n.try_node_idx)
             } //          }
             )
 
           vbody.setPendingBitsEnc(hexToMapping(pendingbits))
-          vbody.setNodeBitsEnc(network.node_strBits)
+          //!!bugs vbody.setNodeBitsEnc(network.node_strBits)
+          vbody.setNodeBitsEnc(hexToMapping(bits))
           vbase.setContents(toByteString(vbody))
           //      vbase.addVoteContents(Any.pack(vbody.build()))
           //      if (network.node_bits.bitCount <= 0) {
@@ -96,7 +100,6 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
         }
         //      }
         //    NodeInstance.forwardMessage("VOTPZP", vbody.build());
-        //vbody.setNodeBitsEnc(bits.toString(16));
         log.debug("Run-----[Sleep]"); //
         val sleepTime = if (pendingbits.bitCount > 0) {
           (Config.MAX_VOTE_SLEEP_MS - Config.MIN_VOTE_SLEEP_MS) + Config.MIN_VOTE_SLEEP_MS

@@ -317,7 +317,7 @@ case class StateStorage(network: Network) extends OLog {
     if (ovs.get != null && ovs.get.size() > 0) {
       val reallist = ovs.get.filter { ov => ov.getValue.getDecimals == pbo.getStateValue }.toList;
       log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
-      //      outputList(ovs.get.toList)
+          //!  outputList(ovs.get.toList)
       if (dm != null) { //Vote only pass half
         dm.voteList(network, pbo, reallist)
       } else {

@@ -36,6 +36,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   def changeRootName(name: String): Unit = {
     rootnode = rootnode.changeName(name);
     syncInfo(rootnode);
+    MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
   }
 
   def isLocalNode(bcuid: String): Boolean = {
@@ -59,7 +60,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   }
   def newNode(nodeidx: Int = -1): PNode = {
     val kp = Daos.enc.genKeys()
-    val newroot = PNode.signNode(NodeHelper.getCurrNodeName, node_idx = -1,
+    val newroot = PNode.signNode(kp.getBcuid, node_idx = -1,
       uri = "tcp://" + NodeHelper.getCurrNodeListenOutAddr + ":" + NodeHelper.getCurrNodeListenOutPort,
       System.currentTimeMillis(), pub_key = kp.getPubkey,
       try_node_idx = nodeidx,
@@ -128,7 +129,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
             try {
               log.info("load node from db info=:" + node_info)
               val r = if (StringUtils.isBlank(node_info)) {
-                newNode(PNode.genIdx());
+                newNode(PNode.genIdx()); 
               } else {
                 deserialize(node_info)
               }
@@ -161,6 +162,7 @@ trait LocalNode extends OLog with PMNodeHelper with LogHelper {
   }
   def resetRoot(node: Node): Unit = {
     this.rootnode = rootnode.changeIdx(node.node_idx).changeName(node.name);
+    MessageSender.sockSender.setCurrentNodeName(rootnode.bcuid)
   }
   def changeNodeIdx(test_bits: BigInt = BigInt("0")): Int = {
     this.synchronized {

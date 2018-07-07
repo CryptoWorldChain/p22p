@@ -42,7 +42,7 @@ class PZPBGLoader() extends Runnable with OLog {
   def run() = {
     URLHelper.init();
     while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]
-      || MessageSender.encApi == null) {
+      || MessageSender.encApi == null || !MessageSender.encApi.isReady()) {
       log.debug("Daos Or sockSender or encApi Not Ready..:enc=" + Daos.enc + ",sender=" + MessageSender.sockSender
         + ",daoready=" + Daos.isDbReady() + ",encapi=" + MessageSender.encApi)
       //      if (Daos.odb != null) {
