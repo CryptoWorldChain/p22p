@@ -32,12 +32,12 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap 
       
       val encbits = mapToBigInt(vb.getNodeBitsEnc);
       val pendingbits = mapToBigInt(vb.getPendingBitsEnc);
-      val oldtotalbits = encbits.+(pendingbits);
+      val oldtotalbits = encbits;
       var totalbits = encbits;
       val pendingInList = vb.getPendingNodesList.filter { pn =>
         pn.getBcuid.equals(network.root().bcuid) ||
           network.pendingNodeByBcuid.contains(pn.getBcuid) ||
-          network.onlineMap.contains(pn.getBcuid) ||
+//          network.onlineMap.contains(pn.getBcuid) ||
           network.directNodeByBcuid.contains(pn.getBcuid)
       }
       totalbits = totalbits.clearBit(network.root().try_node_idx)

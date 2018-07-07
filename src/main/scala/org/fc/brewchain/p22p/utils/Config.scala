@@ -10,9 +10,10 @@ object Config {
   val TIMEOUT_STATE_VIEW_RESET = prop.get(PROP_DOMAIN + "timeout.state.view.reset", 360 * 1000);
   val MIN_EPOCH_EACH_VOTE = prop.get(PROP_DOMAIN + "min.epoch.each.vote", 10 * 1000)
   val MAX_VOTE_SLEEP_MS = prop.get(PROP_DOMAIN + "max.vote.sleep.ms", 60000);
-  val BAN_FOR_VOTE_SLEEP_MS = prop.get(PROP_DOMAIN + "bank.for.vote.sleep.ms", 60000);
+  val BAN_FOR_VOTE_SLEEP_MS = prop.get(PROP_DOMAIN + "ban.for.vote.sleep.ms", 60000);
+  val BAN_FOR_VOTE_MIN_SLEEP_MS = prop.get(PROP_DOMAIN + "ban.for.vote.min.sleep.ms", 10000);
   def getRandSleepForBan(): Int = {
-    (Math.random() * BAN_FOR_VOTE_SLEEP_MS + BAN_FOR_VOTE_SLEEP_MS * 2).asInstanceOf[Int];
+    (Math.abs(Math.random()) * BAN_FOR_VOTE_SLEEP_MS + BAN_FOR_VOTE_MIN_SLEEP_MS).asInstanceOf[Int];
   }
   val MIN_VOTE_SLEEP_MS = prop.get(PROP_DOMAIN + "min.vote.sleep.ms", 10000);
 
