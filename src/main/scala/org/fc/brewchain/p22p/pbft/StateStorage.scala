@@ -258,31 +258,36 @@ case class StateStorage(network: Network) extends OLog {
                 .setRejectState(PBFTStage.REJECT)
                 .setLastUpdateTime(System.currentTimeMillis())
                 .build().toByteArray()))
-            Daos.viewstateDB.put(dbkey + pbo.getState, ov.build());
-            log.warn("getRject ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
-            if (StringUtils.equals(pbo.getOriginBcuid, network.root().bcuid)) {
-              log.debug("Reject for this Vote ")
-              Daos.viewstateDB.put(STR_seq(pbo),
-                OValue.newBuilder().setCount(pbo.getN) //
-                  .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                    .setFromBcuid(network.root().bcuid)
-                    .setState(PBFTStage.INIT)
-                    .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
-                    .build().toByteArray()))
-                  .build())
+            if (Daos.viewstateDB.get(dbkey + pbo.getState) != null) {
+               log.debug("omit reject ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+              PBFTStage.NOOP
             } else {
-              log.debug("Reject for other Vote ")
-              Daos.viewstateDB.put(STR_seq(pbo),
-                OValue.newBuilder().setCount(pbo.getN) //
-                  .setExtdata(ByteString.copyFrom(pbo.toBuilder()
-                    .setFromBcuid(network.root().bcuid)
-                    .setState(PBFTStage.REJECT).setRejectState(PBFTStage.REJECT)
-                    .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
-                    .build().toByteArray()))
-                  .build())
+              Daos.viewstateDB.put(dbkey + pbo.getState, ov.build());
+              log.warn("getRject ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",org_bcuid=" + pbo.getOriginBcuid);
+              if (StringUtils.equals(pbo.getOriginBcuid, network.root().bcuid)) {
+                log.debug("Reject for this Vote ")
+                Daos.viewstateDB.put(STR_seq(pbo),
+                  OValue.newBuilder().setCount(pbo.getN) //
+                    .setExtdata(ByteString.copyFrom(pbo.toBuilder()
+                      .setFromBcuid(network.root().bcuid)
+                      .setState(PBFTStage.INIT)
+                      .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
+                      .build().toByteArray()))
+                    .build())
+              } else {
+                log.debug("Reject for other Vote ")
+                Daos.viewstateDB.put(STR_seq(pbo),
+                  OValue.newBuilder().setCount(pbo.getN) //
+                    .setExtdata(ByteString.copyFrom(pbo.toBuilder()
+                      .setFromBcuid(network.root().bcuid)
+                      .setState(PBFTStage.REJECT).setRejectState(PBFTStage.REJECT)
+                      .setLastUpdateTime(System.currentTimeMillis() + Config.getRandSleepForBan())
+                      .build().toByteArray()))
+                    .build())
 
+              }
+              PBFTStage.REJECT
             }
-            PBFTStage.REJECT
           case n: Converge =>
             log.warn("unknow ConvergeState:" + n.decision + ",NewState=" + newstate + ",pbostate=" + pbo.getState);
             PBFTStage.NOOP
@@ -317,7 +322,7 @@ case class StateStorage(network: Network) extends OLog {
     if (ovs.get != null && ovs.get.size() > 0) {
       val reallist = ovs.get.filter { ov => ov.getValue.getDecimals == pbo.getStateValue }.toList;
       log.debug("get list:allsize=" + ovs.get.size() + ",statesize=" + reallist.size + ",state=" + pbo.getState)
-          //!  outputList(ovs.get.toList)
+      //!  outputList(ovs.get.toList)
       if (dm != null) { //Vote only pass half
         dm.voteList(network, pbo, reallist)
       } else {
