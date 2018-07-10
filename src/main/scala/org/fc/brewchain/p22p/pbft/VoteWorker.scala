@@ -40,6 +40,8 @@ case class VoteWorker(network: Network, voteQueue: VoteQueue) extends SRunner wi
   def getName() = "VoteWorker"
 
   def wallMessage(network: Network, pbo: PVBase) = {
+    
+    
     if (pbo.getRejectState == PBFTStage.REJECT) {
       network.wallOutsideMessage("VOTPZP", Left(pbo), pbo.getMessageUid)
     } else {
