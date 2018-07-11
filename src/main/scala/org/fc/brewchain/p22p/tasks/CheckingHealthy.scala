@@ -65,6 +65,9 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
               } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
                 log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
                 network.removePendingNode(n);
+                network.joinNetwork.joinedNodes.remove(n.bcuid);
+                network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
+                MessageSender.dropNode(n.bcuid)
               } else {
                 log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
                 network.onlineMap.put(n.bcuid, n);
@@ -113,8 +116,10 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                 network.removeDNode(n);
               } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
                 log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
-                network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                 network.removeDNode(n);
+                network.joinNetwork.joinedNodes.remove(n.bcuid);
+                network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
+                MessageSender.dropNode(n.bcuid)
 
               } else {
                 retpack.getPnodesList.map { pn =>
