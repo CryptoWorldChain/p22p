@@ -91,7 +91,7 @@ class PZPBGLoader() extends Runnable with OLog {
       Thread.sleep(1000);
     }
 
-    log.debug("All Network Startup!" + networks)
+    log.debug("All Networks Startup!" + networks)
     //    net.initNode();
     //    net.startup()
 
