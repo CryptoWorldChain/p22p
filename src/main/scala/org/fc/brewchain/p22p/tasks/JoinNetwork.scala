@@ -33,7 +33,7 @@ import java.util.concurrent.CountDownLatch
 import org.brewchain.bcapi.exec.SRunner
 
 //投票决定当前的节点
-case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends SRunner  with PMNodeHelper with LogHelper {
+case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends SRunner with PMNodeHelper with LogHelper {
   def getName() = "JoinNetwork"
   val sameNodes = new HashMap[Integer, PNode]();
   val pendingJoinNodes = new ConcurrentHashMap[String, PNode]();
@@ -47,15 +47,18 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
       log.debug("CurrentNode In Network");
     } else {
       var hasNewNode = true;
-
-      while (hasNewNode) {
+      var joinLoopCount = 0;
+      while (hasNewNode && joinLoopCount < 3) {
         try {
+          val failedNodes = new HashMap[String, PNode]();
           hasNewNode = false;
+          joinLoopCount = joinLoopCount + 1;
           MDCSetBCUID(network);
           val namedNodes = (statupNodes ++ pendingJoinNodes.values()).filter { x =>
             StringUtils.isNotBlank(x.uri) && !sameNodes.containsKey(x.uri.hashCode()) && !joinedNodes.containsKey(x.uri.hashCode()) && //
               !network.isLocalNode(x)
           };
+
           val cdl = new CountDownLatch(namedNodes.size);
           namedNodes.map { n => //for each know Nodes
             //          val n = namedNodes(0);
@@ -103,9 +106,10 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
                       //
                     }
                   }
-                  log.debug("get nodes:count=" + retjoin.getNodesCount+","+sameNodes);
+                  log.debug("get nodes:count=" + retjoin.getNodesCount + "," + sameNodes);
                 }
                 def onFailed(e: java.lang.Exception, fp: FramePacket) {
+                  failedNodes.put(n.uri, n);
                   log.debug("send JINPZP ERROR " + n.uri + ",e=" + e.getMessage, e)
                   cdl.countDown()
                 }
@@ -151,7 +155,9 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
             //next run try another index;
           } else {
             if (pendingJoinNodes.size() > 0) {
-              hasNewNode = true;
+              if (pendingJoinNodes.filter(p => !failedNodes.containsKey(p._2.uri())).size > 0) {
+                hasNewNode = true;
+              }
             }
           }
         } catch {
