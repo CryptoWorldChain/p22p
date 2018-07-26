@@ -94,17 +94,17 @@ object MessageSender extends OLog {
         pack.getExtStrProp(PACK_SIGN) match {
           case n if StringUtils.isNotBlank(n) && n.length() >= 128 =>
             val pubkey = n.substring(0, 128);
-            if (node==net.noneNode||StringUtils.equals(pubkey, node.pub_key)) {
+            if (node == net.noneNode || StringUtils.equals(pubkey, node.pub_key)) {
               val bb = pack.getBody;
               val shabb = encApi.sha256Encode(bb);
               val result = encApi.ecVerifyHex(pubkey, shabb, n);
               if (!result) {
-                log.debug(fromuid+"messageverify error:" + pack.getExtHead + ",sign=" +
+                log.debug(fromuid + "messageverify error:" + pack.getExtHead + ",sign=" +
                   pack.getExtStrProp(MessageSender.PACK_SIGN) + ",sha=" + encApi.hexEnc(shabb))
               }
               Some(result);
             } else {
-              log.debug(fromuid+"messageverify error:fatal:" + pack.getExtHead + ",sign=" +
+              log.debug(fromuid + "messageverify error:fatal:" + pack.getExtHead + ",sign=" +
                 pack.getExtStrProp(MessageSender.PACK_SIGN) + ",pubkey not equal:" +
                 pubkey + ",nodepubkey=" + node.pub_key)
               Some(false);
@@ -121,8 +121,12 @@ object MessageSender extends OLog {
 
   }
 
-  def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket])(implicit network: Network) {
+  def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket], priority: Byte = 0)(implicit network: Network) {
     val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
+    if (priority > 0) {
+      pack.getFixHead.setPrio(priority)
+    }
+
     appendUid(pack, node)
     log.trace("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     try {
@@ -135,24 +139,34 @@ object MessageSender extends OLog {
 
   }
 
-  def asendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket])(implicit network: Network) {
+  def asendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket], priority: Byte = 0)(implicit network: Network) {
     val pack = BCPacket.buildSyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
+    if (priority > 0) {
+      pack.getFixHead.setPrio(priority)
+    }
+
     appendUid(pack, node)
     log.trace("sendMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     sockSender.asyncSend(pack, cb)
   }
 
-  def wallMessageToPending(gcmd: String, body: Message)(implicit network: Network) {
-    val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
-    log.trace("wallMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
-    network.pendingNodes.map { node =>
-      appendUid(pack, node)
-      sockSender.post(pack)
-    }
-  }
+//  def wallMessageToPending(gcmd: String, body: Message, priority: Byte = 0)(implicit network: Network) {
+//    val pack = BCPacket.buildAsyncFrom(body, gcmd.substring(0, 3), gcmd.substring(3));
+//    if (priority > 0) {
+//      pack.getFixHead.setPrio(priority)
+//    }
+//    log.trace("wallMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
+//    network.pendingNodes.map { node =>
+//      appendUid(pack, node)
+//      sockSender.post(pack)
+//    }
+//  }
 
-  def wallMessageToPending(gcmd: String, body: ByteString)(implicit network: Network) {
+  def wallMessageToPending(gcmd: String, body: ByteString, priority: Byte = 0)(implicit network: Network) {
     val pack = BCPacket.buildAsyncFrom(body.toByteArray(), gcmd.substring(0, 3), gcmd.substring(3));
+    if (priority > 0) {
+      pack.getFixHead.setPrio(priority)
+    }
     log.trace("wallMessage:" + pack.getModuleAndCMD + ",F=" + pack.getFrom() + ",T=" + pack.getTo())
     network.pendingNodes.map { node =>
       appendUid(pack, node)
@@ -160,13 +174,16 @@ object MessageSender extends OLog {
     }
   }
 
-  def postMessage(gcmd: String, body: Either[Message, ByteString], node: Node)(implicit network: Network): Unit = {
+  def postMessage(gcmd: String, body: Either[Message, ByteString], node: Node, priority: Byte = 0)(implicit network: Network): Unit = {
     //    if("TTTPZP".equals(gcmd)){
     //      return;
     //    }
     val pack = body match {
       case Left(m) => BCPacket.buildAsyncFrom(m, gcmd.substring(0, 3), gcmd.substring(3));
       case Right(b) => BCPacket.buildAsyncFrom(b.toByteArray(), gcmd.substring(0, 3), gcmd.substring(3));
+    }
+    if (priority > 0) {
+      pack.getFixHead.setPrio(priority)
     }
     appendUid(pack, node)
     //    log.trace("postMessage:" + pack)

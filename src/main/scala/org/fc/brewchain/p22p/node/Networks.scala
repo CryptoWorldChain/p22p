@@ -112,7 +112,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         pendingNodeByBcuid.put(node.bcuid, node);
         log.debug("update pending:" + pendingNodeByBcuid.size + ",p=" + node.bcuid)
         true
-      }else{
+      } else {
         false
       }
     }
@@ -123,7 +123,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
         directNodeByBcuid.put(node.bcuid, node);
         log.debug("update directnode:" + directNodeByBcuid.size + ",p=" + node.bcuid)
         true
-      }else{
+      } else {
         false
       }
     }
@@ -190,7 +190,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
       }
   }
 
-  def wallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "")(implicit nextHops: IntNode = FullNodeSet()): Unit = {
+  def wallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "",priority: Byte = 0)(implicit nextHops: IntNode = FullNodeSet()): Unit = {
     if (circleNR.encbits.bitCount > 0) {
       //      log.debug("wall to DCircle:" + messageId + ",Dnodescount=" + directNodes.size + ",enc=" +
       //        node_strBits())
@@ -199,50 +199,51 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
     pendingNodes.map(n =>
       {
         log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)(this)
+        MessageSender.postMessage(gcmd, body, n,priority)(this)
       })
   }
 
-  def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket]): Unit = {
-    MessageSender.sendMessage(gcmd, body, node, cb)(this)
+  def sendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket],priority: Byte = 0): Unit = {
+    MessageSender.sendMessage(gcmd, body, node, cb,priority)(this)
   }
-  def asendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket]): Unit = {
-    MessageSender.sendMessage(gcmd, body, node, cb)(this)
+  def asendMessage(gcmd: String, body: Message, node: Node, cb: CallBack[FramePacket],priority: Byte = 0): Unit = {
+    MessageSender.sendMessage(gcmd, body, node, cb,priority)(this)
   }
-  def bwallMessage(gcmd: String, body: Either[Message, ByteString], bits: BigInt, messageId: String = ""): Unit = {
+  def bwallMessage(gcmd: String, body: Either[Message, ByteString], bits: BigInt, messageId: String = "",priority: Byte = 0): Unit = {
     directNodes.map(n =>
       if (bits.testBit(n.node_idx)) {
         log.debug("bitpost to direct:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)(this)
+        MessageSender.postMessage(gcmd, body, n,priority)(this)
       })
     pendingNodes.map(n =>
       if (bits.testBit(n.try_node_idx)) {
         log.debug("bitpost to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)(this)
+        MessageSender.postMessage(gcmd, body, n,priority)(this)
       })
   }
 
-  def dwallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
+  def dwallMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "",
+    priority: Byte = 0): Unit = {
     directNodes.map(n =>
       {
         log.debug("post to direct:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)(this)
+        MessageSender.postMessage(gcmd, body, n,priority)(this)
       })
     pendingNodes.map(n =>
       {
         log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)(this)
+        MessageSender.postMessage(gcmd, body, n,priority)(this)
       })
   }
-  def postMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "", toN: String): Unit = {
+  def postMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "", toN: String,priority: Byte = 0): Unit = {
     directNodeByBcuid.get(toN) match {
       case Some(n) =>
-        MessageSender.postMessage(gcmd, body, n)(this)
+        MessageSender.postMessage(gcmd, body, n,priority)(this)
       case None =>
         log.debug("cannot Found Result from direct nodes,try pending");
         pendingNodeByBcuid.get(toN) match {
           case Some(n) =>
-            MessageSender.postMessage(gcmd, body, n)(this)
+            MessageSender.postMessage(gcmd, body, n,priority)(this)
           case None =>
             log.debug("cannot Found Result from pending nodes");
         }
@@ -250,18 +251,18 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
 
   }
 
-  def wallOutsideMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = ""): Unit = {
+  def wallOutsideMessage(gcmd: String, body: Either[Message, ByteString], messageId: String = "",priority: Byte = 0): Unit = {
     directNodes.map { n =>
       if (!isLocalNode(n)) {
         log.debug("post to directNode:bcuid=" + n.bcuid + ",messageid=" + messageId);
-        MessageSender.postMessage(gcmd, body, n)(this)
+        MessageSender.postMessage(gcmd, body, n,priority)(this)
       }
     }
     pendingNodes.map(n =>
       {
         if (!isLocalNode(n)) {
           log.debug("post to pending:bcuid=" + n.bcuid + ",messageid=" + messageId);
-          MessageSender.postMessage("VOTPZP", body, n)(this)
+          MessageSender.postMessage("VOTPZP", body, n,priority)(this)
         }
       })
   }
