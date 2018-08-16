@@ -69,7 +69,6 @@ object PZPVoteBaseService extends LogHelper with PBUtils with LService[PVBase] w
       val network = networkByID(pbo.getNid)
       if (network == null) {
         ret.setRetCode(-1).setRetMessage("unknow network:" + pbo.getNid)
-        handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))
       } else {
         MDCSetBCUID(network)
         log.debug("VoteBase:MType=" + pbo.getMType + ":State=" + pbo.getState + ",V=" + pbo.getV + ",N=" + pbo.getN + ",SN=" + pbo.getStoreNum + ",VC=" + pbo.getViewCounter + ",O=" + pbo.getOriginBcuid + ",F=" + pbo.getFromBcuid
