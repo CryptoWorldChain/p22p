@@ -51,9 +51,9 @@ class PZPHeatBeat extends PSMPZP[PSNodeInfo] {
 object PZPHeatBeatService extends OLog with PBUtils with LService[PSNodeInfo] with PMNodeHelper with LogHelper {
   override def onPBPacket(pack: FramePacket, pbo: PSNodeInfo, handler: CompleteHandler) = {
 //    log.debug("onPBPacket::" + pbo)
-    log.info("get HBT from:"+pack.getFrom()+":sent="+pack.getExtStrProp("T__LOG_SENT"))
     var ret = PRetNodeInfo.newBuilder();
     try {
+      log.info("get HBT from:"+pack.getFrom()+":sent="+pack.getExtStrProp("T__LOG_SENT"))
       //       pbo.getMyInfo.getNodeName
       val network = networkByID(pbo.getNid)
       ret.setCurrent(toPMNode(network.root))

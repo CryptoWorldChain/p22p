@@ -96,7 +96,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                   failedChecking.put(n.bcuid, new AtomicInteger(0));
               }
             }
-          });
+          },'9');
         }
 
         dn.map { n =>
@@ -150,7 +150,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
               }
             }
 
-          });
+          },'9');
 
           try {
             cdl.await(Math.min(Config.TICK_CHECK_HEALTHY, 60), TimeUnit.SECONDS)
