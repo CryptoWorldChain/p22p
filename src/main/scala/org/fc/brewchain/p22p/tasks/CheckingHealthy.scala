@@ -55,7 +55,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             def onSuccess(fp: FramePacket) = {
               cdl.countDown()
               log.debug("send HBTPZP success:to " + n.uri + ",bcuid=" + n.bcuid)
-              failedChecking.remove(n.bcuid)
+              failedChecking.remove(n.bcuid+","+n.startup_time)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
 
               //          log.debug("get nodes:" + retpack);
@@ -82,8 +82,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               cdl.countDown()
-              log.debug("send HBTPZP ERROR " + n.uri + ",e=" + e.getMessage, e)
-              failedChecking.get(n.bcuid) match {
+              log.debug("send HBTPZP ERROR " + n.uri+",bcuid="+n.bcuid+",startup="+n.startup_time + ",e=" + e.getMessage, e)
+              failedChecking.get(n.bcuid+","+n.startup_time) match {
                 case Some(cc) =>
                   if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
                     log.debug("Drop Node for HeatBeat Failed!");
@@ -93,7 +93,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                     network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                   }
                 case None =>
-                  failedChecking.put(n.bcuid, new AtomicInteger(0));
+                  failedChecking.put(n.bcuid+","+n.startup_time, new AtomicInteger(0));
               }
             }
           },'9');
@@ -107,7 +107,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
               cdl.countDown()
               log.debug("send HBTPZP Direct success:to " + n.uri + ",bcuid=" + n.bcuid)
               network.onlineMap.put(n.bcuid, n);
-              failedChecking.remove(n.bcuid)
+              failedChecking.remove(n.bcuid+","+n.startup_time)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
               log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
               if (retpack.getCurrent == null) {
@@ -135,8 +135,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               cdl.countDown()
-              log.debug("send HBTPZP Direct ERROR " + n.uri + ",e=" + e.getMessage, e)
-              failedChecking.get(n.bcuid) match {
+              log.debug("send HBTPZP Direct ERROR " + n.uri+",startup="+n.startup_time + ",e=" + e.getMessage, e)
+              failedChecking.get(n.bcuid+","+n.startup_time) match {
                 case Some(cc) =>
                   if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
                     log.debug("Drop DNode for HeatBeat Failed!");
@@ -146,7 +146,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                     network.removeDNode(n);
                   }
                 case None =>
-                  failedChecking.put(n.bcuid, new AtomicInteger(0));
+                  failedChecking.put(n.bcuid+","+n.startup_time, new AtomicInteger(1));
               }
             }
 
