@@ -55,7 +55,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             def onSuccess(fp: FramePacket) = {
               cdl.countDown()
               log.debug("send HBTPZP success:to " + n.uri + ",bcuid=" + n.bcuid)
-              failedChecking.remove(n.bcuid+","+n.startup_time)
+              failedChecking.remove(n.bcuid + "," + n.startup_time)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
 
               //          log.debug("get nodes:" + retpack);
@@ -82,8 +82,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               cdl.countDown()
-              log.debug("send HBTPZP ERROR " + n.uri+",bcuid="+n.bcuid+",startup="+n.startup_time + ",e=" + e.getMessage, e)
-              failedChecking.get(n.bcuid+","+n.startup_time) match {
+              log.debug("send HBTPZP ERROR " + n.uri + ",bcuid=" + n.bcuid + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
+              failedChecking.get(n.bcuid + "," + n.startup_time) match {
                 case Some(cc) =>
                   if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
                     log.debug("Drop Node for HeatBeat Failed!");
@@ -91,12 +91,15 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                     MessageSender.dropNode(n)
                     network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
                     network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+                  } else {
+                    log.debug("PNode warning. HeatBeat Feiled!:failedcc=" + cc.get);
                   }
+
                 case None =>
-                  failedChecking.put(n.bcuid+","+n.startup_time, new AtomicInteger(1));
+                  failedChecking.put(n.bcuid + "," + n.startup_time, new AtomicInteger(1));
               }
             }
-          },'9');
+          }, '9');
         }
 
         dn.map { n =>
@@ -107,7 +110,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
               cdl.countDown()
               log.debug("send HBTPZP Direct success:to " + n.uri + ",bcuid=" + n.bcuid)
               network.onlineMap.put(n.bcuid, n);
-              failedChecking.remove(n.bcuid+","+n.startup_time)
+              failedChecking.remove(n.bcuid + "," + n.startup_time)
               val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
               log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
               if (retpack.getCurrent == null) {
@@ -135,8 +138,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             }
             def onFailed(e: java.lang.Exception, fp: FramePacket) {
               cdl.countDown()
-              log.debug("send HBTPZP Direct ERROR " + n.uri+",startup="+n.startup_time + ",e=" + e.getMessage, e)
-              failedChecking.get(n.bcuid+","+n.startup_time) match {
+              log.debug("send HBTPZP Direct ERROR " + n.uri + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
+              failedChecking.get(n.bcuid + "," + n.startup_time) match {
                 case Some(cc) =>
                   if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
                     log.debug("Drop DNode for HeatBeat Failed!");
@@ -145,15 +148,15 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                     network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                     network.removeDNode(n);
                     network.removePendingNode(n);
-                  }else{
-                    log.debug("DNode warning. HeatBeat Feiled!:failecc="+cc.get);
+                  } else {
+                    log.debug("DNode warning. HeatBeat Feiled!:failedcc=" + cc.get);
                   }
                 case None =>
-                  failedChecking.put(n.bcuid+","+n.startup_time, new AtomicInteger(1));
+                  failedChecking.put(n.bcuid + "," + n.startup_time, new AtomicInteger(1));
               }
             }
 
-          },'9');
+          }, '9');
 
           try {
             cdl.await(Math.min(Config.TICK_CHECK_HEALTHY, 10), TimeUnit.SECONDS)
