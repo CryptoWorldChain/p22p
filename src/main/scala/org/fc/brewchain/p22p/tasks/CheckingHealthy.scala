@@ -144,6 +144,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                     network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
                     network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                     network.removeDNode(n);
+                  }else{
+                    log.debug("DNode warning. HeatBeat Feiled!:failecc="+cc.get);
                   }
                 case None =>
                   failedChecking.put(n.bcuid+","+n.startup_time, new AtomicInteger(1));
@@ -153,7 +155,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
           },'9');
 
           try {
-            cdl.await(Math.min(Config.TICK_CHECK_HEALTHY, 60), TimeUnit.SECONDS)
+            cdl.await(Math.min(Config.TICK_CHECK_HEALTHY, 10), TimeUnit.SECONDS)
           } catch {
             case t: Throwable =>
               log.debug("checking Health wait error:" + t.getMessage, t);
