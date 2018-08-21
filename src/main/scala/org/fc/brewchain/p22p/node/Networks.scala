@@ -101,6 +101,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
     if (directNodeByBcuid.contains(node.bcuid)) {
       resetNodeBits(node_bits.clearBit(node.node_idx));
       directNodeByBcuid.remove(node.bcuid)
+      directNodeByIdx.remove(node.node_idx);
     } else {
       None
     }
