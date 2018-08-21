@@ -93,7 +93,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                     network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                   }
                 case None =>
-                  failedChecking.put(n.bcuid+","+n.startup_time, new AtomicInteger(0));
+                  failedChecking.put(n.bcuid+","+n.startup_time, new AtomicInteger(1));
               }
             }
           },'9');
@@ -144,6 +144,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
                     network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
                     network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
                     network.removeDNode(n);
+                    network.removePendingNode(n);
                   }else{
                     log.debug("DNode warning. HeatBeat Feiled!:failecc="+cc.get);
                   }
