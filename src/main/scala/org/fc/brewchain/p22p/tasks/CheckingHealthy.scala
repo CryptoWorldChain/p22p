@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import org.fc.brewchain.p22p.utils.Config
 import java.util.concurrent.CountDownLatch
 import org.brewchain.bcapi.exec.SRunner
+import onight.tfw.outils.serialize.SessionIDGenerator
 
 //投票决定当前的节点
 case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
@@ -50,119 +51,137 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
         val dn = network.directNodes.filter { _.bcuid != network.root().bcuid }
         val cdl = new CountDownLatch(pn.size + dn.size);
         pn.map { n =>
-          log.debug("checking Health to pending@" + n.bcuid + ",uri=" + n.uri)
-          MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
-            def onSuccess(fp: FramePacket) = {
-              cdl.countDown()
-              log.debug("send HBTPZP success:to " + n.uri + ",bcuid=" + n.bcuid)
-              failedChecking.remove(n.bcuid + "," + n.startup_time)
-              val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
+          if (!SessionIDGenerator.checkSum(n.bcuid)) {
+            cdl.countDown();
+            log.debug("DropNode From Pending ERROR BCUID CheckSum:bcuid=" + ",n=" + n.bcuid + ",uri=" + n.uri + ";");
+            network.removePendingNode(n);
+            network.joinNetwork.joinedNodes.remove(n.bcuid);
+            network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
+            MessageSender.dropNode(n.bcuid)
+          } else {
+            log.debug("checking Health to pending@" + n.bcuid + ",uri=" + n.uri)
+            MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
+              def onSuccess(fp: FramePacket) = {
+                cdl.countDown()
+                log.debug("send HBTPZP success:to " + n.uri + ",bcuid=" + n.bcuid)
+                failedChecking.remove(n.bcuid + "," + n.startup_time)
+                val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
 
-              //          log.debug("get nodes:" + retpack);
-              if (retpack.getCurrent == null) {
-                log.debug("Node EROR NotFOUND:" + retpack);
-                network.removePendingNode(n);
-              } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
-                log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
-                network.removePendingNode(n);
-                network.joinNetwork.joinedNodes.remove(n.bcuid);
-                network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
-                MessageSender.dropNode(n.bcuid)
-              } else {
-                log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
-                network.onlineMap.put(n.bcuid, n);
-                def joinFunc(pn: PMNodeInfo) = {
-                  val pnode = fromPMNode(pn);
-                  network.addPendingNode(pnode);
-                  network.joinNetwork.pendingJoinNodes.put(pnode.bcuid, pnode)
-                }
-                retpack.getPnodesList.map(joinFunc)
-                retpack.getDnodesList.map(joinFunc)
-              }
-            }
-            def onFailed(e: java.lang.Exception, fp: FramePacket) {
-              cdl.countDown()
-              log.debug("send HBTPZP ERROR " + n.uri + ",bcuid=" + n.bcuid + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
-              failedChecking.get(n.bcuid + "," + n.startup_time) match {
-                case Some(cc) =>
-                  if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
-                    log.debug("Drop Node for HeatBeat Failed!");
-                    network.removePendingNode(n);
-                    MessageSender.dropNode(n)
-                    network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
-                    network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
-                  } else {
-                    log.debug("PNode warning. HeatBeat Feiled!:failedcc=" + cc.get);
+                //          log.debug("get nodes:" + retpack);
+                if (retpack.getCurrent == null) {
+                  log.debug("Node EROR NotFOUND:" + retpack);
+                  network.removePendingNode(n);
+                } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
+                  log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
+                  network.removePendingNode(n);
+                  network.joinNetwork.joinedNodes.remove(n.bcuid);
+                  network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
+                  MessageSender.dropNode(n.bcuid)
+                } else {
+                  log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
+                  network.onlineMap.put(n.bcuid, n);
+                  def joinFunc(pn: PMNodeInfo) = {
+                    val pnode = fromPMNode(pn);
+                    network.addPendingNode(pnode);
+                    network.joinNetwork.pendingJoinNodes.put(pnode.bcuid, pnode)
                   }
-
-                case None =>
-                  failedChecking.put(n.bcuid + "," + n.startup_time, new AtomicInteger(1));
+                  retpack.getPnodesList.map(joinFunc)
+                  retpack.getDnodesList.map(joinFunc)
+                }
               }
-            }
-          }, '9');
+              def onFailed(e: java.lang.Exception, fp: FramePacket) {
+                cdl.countDown()
+                log.debug("send HBTPZP ERROR uri=" + n.uri + ",bcuid=" + n.bcuid + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
+                failedChecking.get(n.bcuid + "," + n.startup_time) match {
+                  case Some(cc) =>
+                    if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
+                      log.debug("Drop Node for HeatBeat Failed!");
+                      network.removePendingNode(n);
+                      MessageSender.dropNode(n)
+                      network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
+                      network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+                    } else {
+                      log.debug("PNode warning. HeatBeat Feiled!:failedcc=" + cc.get);
+                    }
+
+                  case None =>
+                    failedChecking.put(n.bcuid + "," + n.startup_time, new AtomicInteger(1));
+                }
+              }
+            }, '9');
+          }
         }
 
         dn.map { n =>
+          if (!SessionIDGenerator.checkSum(n.bcuid)) {
+            cdl.countDown();
+            log.debug("DropNode From DNodes ERROR BCUID CheckSum:bcuid=" + ",n=" + n.bcuid + ",uri=" + n.uri + ";");
+            MessageSender.dropNode(n)
+            network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
+            network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+            network.removeDNode(n);
+            network.removePendingNode(n);
+          } else {
+            log.debug("checking Health to directs@" + n.bcuid + ",uri=" + n.uri)
+            MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
+              def onSuccess(fp: FramePacket) = {
+                cdl.countDown()
+                log.debug("send HBTPZP Direct success:to " + n.uri + ",bcuid=" + n.bcuid)
+                network.onlineMap.put(n.bcuid, n);
+                failedChecking.remove(n.bcuid + "," + n.startup_time)
+                val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
+                log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
+                if (retpack.getCurrent == null) {
+                  log.debug("Node EROR NotFOUND:" + retpack);
+                  network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+                  network.removeDNode(n);
+                } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
+                  log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
+                  network.removeDNode(n);
+                  network.joinNetwork.joinedNodes.remove(n.bcuid);
+                  network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
+                  MessageSender.dropNode(n.bcuid)
 
-          log.debug("checking Health to directs@" + n.bcuid + ",uri=" + n.uri)
-          MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
-            def onSuccess(fp: FramePacket) = {
-              cdl.countDown()
-              log.debug("send HBTPZP Direct success:to " + n.uri + ",bcuid=" + n.bcuid)
-              network.onlineMap.put(n.bcuid, n);
-              failedChecking.remove(n.bcuid + "," + n.startup_time)
-              val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
-              log.debug("get nodes:pendingcount=" + retpack.getPnodesCount + ",dnodecount=" + retpack.getDnodesCount);
-              if (retpack.getCurrent == null) {
-                log.debug("Node EROR NotFOUND:" + retpack);
-                network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
-                network.removeDNode(n);
-              } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
-                log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
-                network.removeDNode(n);
-                network.joinNetwork.joinedNodes.remove(n.bcuid);
-                network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
-                MessageSender.dropNode(n.bcuid)
-
-              } else {
-                retpack.getPnodesList.map { pn =>
-                  network.addPendingNode(fromPMNode(pn));
-                }
-                //fix bugs when some node down.2018.3
-                retpack.getDnodesList.map { pn =>
-                  if (network.nodeByBcuid(pn.getBcuid) == network.noneNode) {
+                } else {
+                  retpack.getPnodesList.map { pn =>
                     network.addPendingNode(fromPMNode(pn));
                   }
+                  //fix bugs when some node down.2018.3
+                  retpack.getDnodesList.map { pn =>
+                    if (network.nodeByBcuid(pn.getBcuid) == network.noneNode) {
+                      network.addPendingNode(fromPMNode(pn));
+                    }
+                  }
                 }
               }
-            }
-            def onFailed(e: java.lang.Exception, fp: FramePacket) {
-              cdl.countDown()
-              log.debug("send HBTPZP Direct ERROR " + n.uri + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
-              failedChecking.get(n.bcuid + "," + n.startup_time) match {
-                case Some(cc) =>
-                  if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
-                    log.debug("Drop DNode for HeatBeat Failed!");
-                    MessageSender.dropNode(n)
-                    network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
-                    network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
-                    network.removeDNode(n);
-                    network.removePendingNode(n);
-                  } else {
-                    log.debug("DNode warning. HeatBeat Feiled!:failedcc=" + cc.get);
-                  }
-                case None =>
-                  failedChecking.put(n.bcuid + "," + n.startup_time, new AtomicInteger(1));
+              def onFailed(e: java.lang.Exception, fp: FramePacket) {
+                cdl.countDown()
+                log.debug("send HBTPZP Direct ERROR " + n.uri + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
+                failedChecking.get(n.bcuid + "," + n.startup_time) match {
+                  case Some(cc) =>
+                    if (cc.incrementAndGet() >= Config.HB_FAILED_COUNT) {
+                      log.debug("Drop DNode for HeatBeat Failed!");
+                      MessageSender.dropNode(n)
+                      network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
+                      network.joinNetwork.pendingJoinNodes.remove(n.bcuid);
+                      network.removeDNode(n);
+                      network.removePendingNode(n);
+                    } else {
+                      log.debug("DNode warning. HeatBeat Feiled!:failedcc=" + cc.get);
+                    }
+                  case None =>
+                    failedChecking.put(n.bcuid + "," + n.startup_time, new AtomicInteger(1));
+                }
               }
+
+            }, '9');
+
+            try {
+              cdl.await(Math.min(Config.TICK_CHECK_HEALTHY, 10), TimeUnit.SECONDS)
+            } catch {
+              case t: Throwable =>
+                log.debug("checking Health wait error:" + t.getMessage, t);
             }
-
-          }, '9');
-
-          try {
-            cdl.await(Math.min(Config.TICK_CHECK_HEALTHY, 10), TimeUnit.SECONDS)
-          } catch {
-            case t: Throwable =>
-              log.debug("checking Health wait error:" + t.getMessage, t);
           }
         }
       } finally {

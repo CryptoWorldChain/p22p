@@ -30,6 +30,7 @@ import org.fc.brewchain.p22p.node.Network
 import java.util.concurrent.atomic.AtomicBoolean
 import org.brewchain.bcapi.exec.SRunner
 import org.fc.brewchain.p22p.utils.LogHelper
+import onight.tfw.outils.serialize.SessionIDGenerator
 
 //投票决定当前的节点
 case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner with PMNodeHelper with BitMap with LogHelper {
@@ -56,7 +57,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
             network.joinNetwork.pendingJoinNodes.size() + ": Online=" + network.onlineMap.size)
           //for fast load
         } else if (network.stateStorage.nextV(vbase) > 0) {
-          
+
           vbase.setMessageUid(UUIDGenerator.generate())
           vbase.setOriginBcuid(network.root().bcuid)
           vbase.setFromBcuid(network.root().bcuid);
@@ -69,12 +70,14 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
 
           network.pendingNodes.map(n =>
             //          if (network.onlineMap.contains(n.bcuid)) {
-            if (bits.testBit(n.try_node_idx)) {
+            if (!SessionIDGenerator.checkSum(n.bcuid)) {
+              log.debug("error in bcuid checksum @n=" + n.name + ",bcuid=" + n.bcuid + ",try_idx==" + n.try_node_idx+",bits="+bits);
+            } else if (bits.testBit(n.try_node_idx)) {
               log.debug("error in try_node_idx @n=" + n.name + ",try=" + n.try_node_idx + ",bits=" + bits);
             } else { //no pub keys
               pendingbits = pendingbits.setBit(n.try_node_idx);
               vbody.addPendingNodes(toPMNode(n));
-              bits=bits.setBit(n.try_node_idx)
+              bits = bits.setBit(n.try_node_idx)
             } //          }
             )
 

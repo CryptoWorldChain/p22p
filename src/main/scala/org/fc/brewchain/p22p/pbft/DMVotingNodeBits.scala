@@ -19,8 +19,9 @@ import org.fc.brewchain.bcapi.crypto.BitMap
 import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.p22p.node.Network
 import org.fc.brewchain.p22p.utils.LogHelper
+import onight.tfw.outils.serialize.SessionIDGenerator
 
-object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap with LogHelper{
+object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap with LogHelper {
   def makeDecision(network: Network, pbo: PVBase, reallist: List[OPair]): Option[String] = {
     val vb = PBVoteNodeIdx.newBuilder().mergeFrom(pbo.getContents);
     MDCSetMessageID(pbo.getMessageUid)
@@ -29,7 +30,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap 
     if (pbo.getRejectState == PBFTStage.REJECT) {
       None;
     } else {
-      
+
       val encbits = mapToBigInt(vb.getNodeBitsEnc);
       val pendingbits = mapToBigInt(vb.getPendingBitsEnc);
       val oldtotalbits = encbits;
@@ -37,20 +38,28 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap 
       val pendingInList = vb.getPendingNodesList.filter { pn =>
         pn.getBcuid.equals(network.root().bcuid) ||
           network.pendingNodeByBcuid.contains(pn.getBcuid) ||
-//          network.onlineMap.contains(pn.getBcuid) ||
+          //          network.onlineMap.contains(pn.getBcuid) ||
           network.directNodeByBcuid.contains(pn.getBcuid)
       }
       totalbits = totalbits.clearBit(network.root().try_node_idx)
       network.directNodes.map { pn =>
-        log.debug("directnode idx="+pn.node_idx+",bcuid="+pn.bcuid);
-        totalbits = totalbits.clearBit(pn.node_idx)
+        if (SessionIDGenerator.checkSum(pn.bcuid)) {
+          log.debug("directnode idx=" + pn.node_idx + ",bcuid=" + pn.bcuid);
+          totalbits = totalbits.clearBit(pn.node_idx)
+        } else {
+          log.debug("directnode bcuid checksum error=nodeidx=" + pn.node_idx + ",bcuid=" + pn.bcuid);
+        }
       }
       network.pendingNodes.map { pn =>
         //      if(!Networks.instance.onlineMap.contains(pn.bcuid)){
         //        log.warn("pending node not online:"+pn.bcuid);
         //      }
-        log.debug("pending tryidx="+pn.try_node_idx+",bcuid="+pn.bcuid);
-        totalbits = totalbits.clearBit(pn.try_node_idx)
+        if (SessionIDGenerator.checkSum(pn.bcuid)) {
+          log.debug("pending tryidx=" + pn.try_node_idx + ",bcuid=" + pn.bcuid);
+          totalbits = totalbits.clearBit(pn.try_node_idx)
+        } else {
+          log.debug("pendingnode bcuid checksum error=trynodeidx=" + pn.try_node_idx + ",bcuid=" + pn.bcuid);
+        }
       }
       log.debug("totalbits::" + oldtotalbits.toString(16) + "-->" + totalbits.toString(16)
         + ":pbpendinCount=" + vb.getPendingNodesCount
@@ -61,7 +70,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap 
       //1. check encbits. for direct nodes 
       if (pendingInList.size == vb.getPendingNodesCount
         && totalbits.bitCount == 0) {
-        log.debug("Make_Decision:"+vb.getNodeBitsEnc+":");
+        log.debug("Make_Decision:" + vb.getNodeBitsEnc + ":");
         Some(vb.getNodeBitsEnc)
       } else {
         log.debug("reject for node_bits not equals:")
