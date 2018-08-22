@@ -70,7 +70,7 @@ case class VoteNodeMap(network: Network, voteQueue: VoteQueue) extends SRunner w
 
           network.pendingNodes.map(n =>
             //          if (network.onlineMap.contains(n.bcuid)) {
-            if (!SessionIDGenerator.checkSum(n.bcuid)) {
+            if (!SessionIDGenerator.checkSum(n.bcuid.substring(1))) {
               log.debug("error in bcuid checksum @n=" + n.name + ",bcuid=" + n.bcuid + ",try_idx==" + n.try_node_idx+",bits="+bits);
             } else if (bits.testBit(n.try_node_idx)) {
               log.debug("error in try_node_idx @n=" + n.name + ",try=" + n.try_node_idx + ",bits=" + bits);

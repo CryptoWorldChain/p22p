@@ -43,7 +43,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap 
       }
       totalbits = totalbits.clearBit(network.root().try_node_idx)
       network.directNodes.map { pn =>
-        if (SessionIDGenerator.checkSum(pn.bcuid)) {
+        if (SessionIDGenerator.checkSum(pn.bcuid.substring(1))) {
           log.debug("directnode idx=" + pn.node_idx + ",bcuid=" + pn.bcuid);
           totalbits = totalbits.clearBit(pn.node_idx)
         } else {
@@ -54,7 +54,7 @@ object DMVotingNodeBits extends Votable with OLog with PMNodeHelper with BitMap 
         //      if(!Networks.instance.onlineMap.contains(pn.bcuid)){
         //        log.warn("pending node not online:"+pn.bcuid);
         //      }
-        if (SessionIDGenerator.checkSum(pn.bcuid)) {
+        if (SessionIDGenerator.checkSum(pn.bcuid.substring(1))) {
           log.debug("pending tryidx=" + pn.try_node_idx + ",bcuid=" + pn.bcuid);
           totalbits = totalbits.clearBit(pn.try_node_idx)
         } else {

@@ -51,7 +51,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
         val dn = network.directNodes.filter { _.bcuid != network.root().bcuid }
         val cdl = new CountDownLatch(pn.size + dn.size);
         pn.map { n =>
-          if (!SessionIDGenerator.checkSum(n.bcuid)) {
+          if (!SessionIDGenerator.checkSum(n.bcuid.substring(1))) {
             cdl.countDown();
             log.debug("DropNode From Pending ERROR BCUID CheckSum:bcuid=" + ",n=" + n.bcuid + ",uri=" + n.uri + ";");
             network.removePendingNode(n);
@@ -113,7 +113,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
         }
 
         dn.map { n =>
-          if (!SessionIDGenerator.checkSum(n.bcuid)) {
+          if (!SessionIDGenerator.checkSum(n.bcuid.substring(1))) {
             cdl.countDown();
             log.debug("DropNode From DNodes ERROR BCUID CheckSum:bcuid=" + ",n=" + n.bcuid + ",uri=" + n.uri + ";");
             MessageSender.dropNode(n)
