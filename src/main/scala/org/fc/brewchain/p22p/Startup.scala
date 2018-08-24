@@ -18,6 +18,7 @@ import scala.collection.JavaConversions._
 import org.apache.commons.lang3.StringUtils
 import org.fc.brewchain.p22p.node.PNode
 import java.util.HashMap
+import org.fc.brewchain.p22p.utils.LogHelper
 
 @NActorProvider
 class Startup extends PSMPZP[Message] {
@@ -38,7 +39,7 @@ class Startup extends PSMPZP[Message] {
 
 }
 
-class PZPBGLoader() extends Runnable with OLog {
+class PZPBGLoader() extends Runnable with OLog with LogHelper{
   def run() = {
     URLHelper.init();
     while (!Daos.isDbReady() || MessageSender.sockSender.isInstanceOf[NonePackSender]
@@ -74,14 +75,16 @@ class PZPBGLoader() extends Runnable with OLog {
         val subnet = Networks.networkByID(Daos.props.get("org.bc.pzp.networks." + net.netid + ".subnet", ""))
         if (subnet != null) {
           if (subnet.root() != PNode.NoneNode) {
-            log.debug("cluster ready: " + net.netid + " for startup:" + f._1 + "  ... [OK]");
             net.initClusterNode(subnet.root(), subnet.root().name);
             net.startup()
+            MDCSetBCUID(net);
+            log.debug("cluster ready: " + net.netid + " for startup:" + f._1 + "  ... [OK]");
             initlist.remove(f._1)
           } else {
             log.debug("subnet not ready: " + net.netid + " for cluster:" + f._1 + " ... [OK]");
           }
         } else {
+          MDCSetBCUID(net);
           log.debug("init net: " + net.netid + " ... [OK]");
           net.initNode();
           net.startup()

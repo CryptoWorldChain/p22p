@@ -34,15 +34,18 @@ import org.fc.brewchain.p22p.utils.Config
 import java.util.concurrent.CountDownLatch
 import org.brewchain.bcapi.exec.SRunner
 import onight.tfw.outils.serialize.SessionIDGenerator
+import org.fc.brewchain.p22p.utils.LogHelper
 
 //投票决定当前的节点
-case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
+case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper with LogHelper {
   def getName() = "CheckingHealthy"
   val checking = new AtomicBoolean(false)
   val failedChecking = Map[String, AtomicInteger]();
   def runOnce() = {
     if (checking.compareAndSet(false, true)) {
       try {
+        MDCSetBCUID(network)
+
         //    if (!StringUtils.isBlank(network.root().pub_key)) {
         val pack = PSNodeInfo.newBuilder().setNode(toPMNode(network.root()))
           .setNid(network.netid).build()
@@ -63,6 +66,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
                 cdl.countDown()
+                MDCSetBCUID(network)
+
                 log.debug("send HBTPZP success:to " + n.uri + ",bcuid=" + n.bcuid)
                 failedChecking.remove(n.bcuid + "," + n.startup_time)
                 val retpack = PRetNodeInfo.newBuilder().mergeFrom(fp.getBody);
@@ -91,6 +96,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
               }
               def onFailed(e: java.lang.Exception, fp: FramePacket) {
                 cdl.countDown()
+                MDCSetBCUID(network)
+
                 log.debug("send HBTPZP ERROR uri=" + n.uri + ",bcuid=" + n.bcuid + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
                 failedChecking.get(n.bcuid + "," + n.startup_time) match {
                   case Some(cc) =>
@@ -126,6 +133,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
             MessageSender.asendMessage("HBTPZP", pack, n, new CallBack[FramePacket] {
               def onSuccess(fp: FramePacket) = {
                 cdl.countDown()
+                MDCSetBCUID(network)
+
                 log.debug("send HBTPZP Direct success:to " + n.uri + ",bcuid=" + n.bcuid)
                 network.onlineMap.put(n.bcuid, n);
                 failedChecking.remove(n.bcuid + "," + n.startup_time)
@@ -156,6 +165,8 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper {
               }
               def onFailed(e: java.lang.Exception, fp: FramePacket) {
                 cdl.countDown()
+                MDCSetBCUID(network)
+
                 log.debug("send HBTPZP Direct ERROR " + n.uri + ",startup=" + n.startup_time + ",e=" + e.getMessage, e)
                 failedChecking.get(n.bcuid + "," + n.startup_time) match {
                   case Some(cc) =>
