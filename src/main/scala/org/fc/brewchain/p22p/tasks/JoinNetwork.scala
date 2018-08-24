@@ -43,8 +43,9 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
     Thread.currentThread().setName("JoinNetwork");
 
     implicit val _net = network
-    if (network.inNetwork()&&pendingJoinNodes.size()<=0) {
-      log.debug("CurrentNode In Network");
+    if (network.inNetwork() && pendingJoinNodes.size() <= 0
+      && statupNodes.filter { x => joinedNodes.containsKey(x.uri.hashCode()) }.size == statupNodes.size) {
+      log.debug("CurrentNode In Network:startupNodes.size="+statupNodes.size+",joinedNodeSize="+joinedNodes.size());
     } else {
       var hasNewNode = true;
       var joinLoopCount = 0;
