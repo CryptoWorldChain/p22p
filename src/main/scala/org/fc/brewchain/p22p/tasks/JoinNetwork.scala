@@ -130,7 +130,8 @@ case class JoinNetwork(network: Network, statupNodes: Iterable[PNode]) extends S
             log.debug("finished connect to all nodes");
           }
           if (namedNodes.size == 0) {
-            log.debug("cannot reach more nodes. try from begining");
+            log.debug("cannot reach more nodes. try from begining :namedNodes.size="+namedNodes.size()+",startupNodes.size="+statupNodes.size+",joinedSize="+joinedNodes);
+            statupNodes.map { x => joinedNodes.remove(x.uri().hashCode()) }
             if (duplictedInfoNodes.size > network.pendingNodes.size / 3 && !network.directNodeByBcuid.contains(network.root().bcuid)) {
               //            val nl = duplictedInfoNodes.values.toSeq.PBFTVote { x => Some(x.node_idx) }
               //            nl.decision match {

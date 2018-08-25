@@ -38,6 +38,7 @@ import onight.tfw.ntrans.api.ActorService
 import onight.tfw.proxy.IActor
 import onight.tfw.otransio.api.session.CMDService
 import org.fc.brewchain.p22p.core.MessageSender
+import onight.tfw.outils.serialize.SessionIDGenerator
 
 @NActorProvider
 @Slf4j
@@ -62,25 +63,27 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         MDCSetBCUID(network)
         //       pbo.getMyInfo.getNodeName
         val from = pbo.getMyInfo;
-//        log.debug("verify Message=="+MessageSender.verifyMessage(pack)(network));
+        //        log.debug("verify Message=="+MessageSender.verifyMessage(pack)(network));
         ret.setMyInfo(toPMNode(network.root))
-        if(StringUtils.isBlank(from.getBcuid)||StringUtils.isBlank(from.getPubKey)){
+        if (StringUtils.isBlank(from.getBcuid) || StringUtils.isBlank(from.getPubKey)) {
           log.debug("get empty bcuid");
           ret.setRetCode(-1).setRetMessage("unknow id");
-        }else
-        if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
+        } else if (!SessionIDGenerator.checkSum(from.getBcuid.substring(1))) {
+          log.debug("invalid bcuid:" + from.getBcuid);
+          ret.setRetCode(-4).setRetMessage("bcuid invalid");
+          MessageSender.dropNode(from.getBcuid)
+        } else if (pbo.getOp == PSJoin.Operation.NODE_CONNECT) {
           System.setProperty("java.protocol.handler.pkgs", "org.fc.brewchain.bcapi.url");
           log.debug("getURI:" + from.getUri)
           //          from.getUri.split(",").map { new URL(_) } //checking uri
           //          val _urlcheck = new URL(from.getUri)
           val samenode = StringUtils.equals(pbo.getNetworkInstance,
-            Networks.instanceid) ;
-          if ( samenode &&
+            Networks.instanceid);
+          if (samenode &&
             ((from.getTryNodeIdx > 0 && from.getTryNodeIdx == network.root().node_idx) ||
-            StringUtils.equals(from.getBcuid, network.root().bcuid))) {
-            log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid+",netid="+
-                samenode+":"+pbo.getNetworkInstance+"-->"+Networks.instanceid
-                );
+              StringUtils.equals(from.getBcuid, network.root().bcuid))) {
+            log.info("same NodeIdx :" + from.getNodeIdx + ",tryIdx=" + from.getTryNodeIdx + ",bcuid=" + from.getBcuid + ",netid=" +
+              samenode + ":" + pbo.getNetworkInstance + "-->" + Networks.instanceid);
             //            MessageSender.dropNode(from.getBcuid);
             ret.setRetCode(-1)
             throw new NodeInfoDuplicated("NodeIdx=" + from.getNodeIdx);
@@ -133,12 +136,12 @@ object PZPNodeJoinService extends LogHelper with PBUtils with LService[PSJoin] w
         }
         case e: FBSException => {
           ret.clear()
-          ret.setRetCode(-2).setRetMessage(""+e.getMessage)
+          ret.setRetCode(-2).setRetMessage("" + e.getMessage)
         }
         case t: Throwable => {
           log.error("error:", t);
           ret.clear()
-          ret.setRetCode(-3).setRetMessage(""+t.getMessage)
+          ret.setRetCode(-3).setRetMessage("" + t.getMessage)
         }
       } finally {
         handler.onFinished(PacketHelper.toPBReturn(pack, ret.build()))

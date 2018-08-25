@@ -58,7 +58,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper w
             cdl.countDown();
             log.debug("DropNode From Pending ERROR BCUID CheckSum:bcuid=" + ",n=" + n.bcuid + ",uri=" + n.uri + ";");
             network.removePendingNode(n);
-            network.joinNetwork.joinedNodes.remove(n.bcuid);
+            network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
             network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
             MessageSender.dropNode(n.bcuid)
           } else {
@@ -79,7 +79,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper w
                 } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
                   log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
                   network.removePendingNode(n);
-                  network.joinNetwork.joinedNodes.remove(n.bcuid);
+                  network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
                   network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
                   MessageSender.dropNode(n.bcuid)
                 } else {
@@ -147,7 +147,7 @@ case class CheckingHealthy(network: Network) extends SRunner with PMNodeHelper w
                 } else if (!StringUtils.equals(retpack.getCurrent.getBcuid, n.bcuid)) {
                   log.debug("Node EROR BCUID Not Equal:" + retpack.getCurrent.getBcuid + ",n=" + n.bcuid);
                   network.removeDNode(n);
-                  network.joinNetwork.joinedNodes.remove(n.bcuid);
+                  network.joinNetwork.joinedNodes.remove(n.uri.hashCode());
                   network.joinNetwork.pendingJoinNodes.remove(n.bcuid)
                   MessageSender.dropNode(n.bcuid)
 
