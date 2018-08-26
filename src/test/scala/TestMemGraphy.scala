@@ -67,7 +67,7 @@ object TestMemGraphy extends OLog  with BitMap{
       val n = net.nodeByIdx(0).get;
       //CircleNR.resetMap(net.root.node_idx, nodeCount);
       //                  RandomNR.broadcastMessage(PacketHelper.genSyncPack("TEST", "ABC", "hello"))(net.nodeByIdx((Math.random() * nodeCount % nodeCount).asInstanceOf[Int]).get, network = net)
-      circleNR.broadcastMessage("TTTPZP",Left(StringValue.newBuilder().setValue("abc").build()),net.root())( toN=net.root(),network = net,messageid="abc")
+      circleNR.broadcastMessage("TTTPZP",Left(StringValue.newBuilder().setValue("abc").build()),net.root(),'0')( toN=net.root(),network = net,messageid="abc")
       //       if (net.connectedMap.size != nodes.size + 1) {
 //      println("netmapsize. =:" + net.connectedMap)
       //          }

@@ -43,7 +43,7 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
     }
     ret
   }
-  override def broadcastMessage(gcmd: String, body: Either[Message, ByteString], from: Node)(implicit toN: Node,
+  override def broadcastMessage(gcmd: String, body: Either[Message, ByteString], from: Node,priority:Byte)(implicit toN: Node,
     nextHops: IntNode = FullNodeSet(),
     network: Network, messageid: String): Unit = {
     //    log.debug("broadcastMessage:cur=@" + toN.node_idx + ",from.idx=" + from.node_idx + ",netxt=" + nextHops)
@@ -62,7 +62,7 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
                 network.nodeByIdx(idx) match {
                   case Some(n) =>
                     treere.treeHops.nodes.map { nids =>
-                      routeMessage(gcmd, body)(n, nids, network, messageid)
+                      routeMessage(gcmd, body,priority)(n, nids, network, messageid)
                     }
                   case _ =>
                     log.warn("not found id:" + treere.fromIdx + "==>idx=" + idx)
@@ -80,16 +80,16 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
         log.debug("Leaf Node");
       case ns: NodeSet =>
         ns.nodes.map { nids =>
-          routeMessage(gcmd, body)(toN, nids, network, messageid)
+          routeMessage(gcmd, body,priority)(toN, nids, network, messageid)
         }
       case subset: DeepTreeSet =>
-        routeMessage(gcmd, body)(toN, subset, network, messageid)
+        routeMessage(gcmd, body,priority)(toN, subset, network, messageid)
       case subset: IntNode =>
         log.warn("unknow subset:" + subset)
     }
 
   }
-  override def routeMessage(gcmd: String, body: Either[Message, ByteString])(implicit from: Node, //
+  override def routeMessage(gcmd: String, body: Either[Message, ByteString],priority:Byte)(implicit from: Node, //
     nextHops: IntNode,
     network: Network, messageid: String) {
     //        log.debug("routeMessage:from=" + from.node_idx + ",next=" + nextHops)
@@ -115,7 +115,7 @@ case class CircleNR(encbits: BigInt) extends MessageRouter with OLog with NodeSe
                   .setMessageid(messageid)
                   .setNid(network.netid)
                   .setNetwork("local").setNextHops(scala2pb(ts.treeHops)).build();
-                MessageSender.postMessage("RRRPZP", Left(vbody), n);
+                MessageSender.postMessage("RRRPZP", Left(vbody), n,priority);
               //                broadcastMessage(gcmd,body, from)(n, ts.treeHops, network)
               case _ =>
                 log.warn("not found id:" + ts.fromIdx + "==>idx=" + idx)

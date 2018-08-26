@@ -15,7 +15,7 @@ import org.fc.brewchain.p22p.node.Node
 object RandomNR extends MessageRouter with OLog {
   def getRand() = Math.random(); //DHTConsRand.getRandFactor()
 
-  override def routeMessage(gcmd:String,body: Either[Message,ByteString])(implicit from: Node, //
+  override def routeMessage(gcmd:String,body: Either[Message,ByteString],priority:Byte)(implicit from: Node, //
     nextHops: IntNode = FullNodeSet(),
     network: Network,messageid:String) {
     //    log.debug("routeMessage:from=" + from.node_idx + ",next=" + nextHops)
@@ -53,7 +53,7 @@ object RandomNR extends MessageRouter with OLog {
         }
         startNodeSets.map { sn =>
           val (setid, node) = sn
-          broadcastMessage(gcmd,body,node)(node,
+          broadcastMessage(gcmd,body,node,priority)(node,
             FlatSet(node.node_idx, mapSets.getOrElse(setid, BigInt(0))), network,messageid)
         }
       //

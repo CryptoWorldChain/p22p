@@ -90,7 +90,7 @@ object TestNodeConverge extends OLog {
         val net = networks((Math.random() * nodeCount % nodeCount).asInstanceOf[Int]);
         val n = net.nodeByIdx((Math.random() * nodeCount % nodeCount).asInstanceOf[Int]).get;
         //      RandomNR.broadcastMessage(PacketHelper.genSyncPack("TEST", "ABC", "hello"),rootn)(n, network = net)
-        circleNr.broadcastMessage("TTTPZP",Left(StringValue.newBuilder().setValue("abc").build()), rootn)(n, network = net,messageid="abc")
+        circleNr.broadcastMessage("TTTPZP",Left(StringValue.newBuilder().setValue("abc").build()), rootn,'0')(n, network = net,messageid="abc")
         //        node.forwardMessage("aaa", msg, node.directNode.keys, node);
       }
     }, 1, 100, TimeUnit.MICROSECONDS)

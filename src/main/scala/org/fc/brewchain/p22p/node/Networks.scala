@@ -195,7 +195,7 @@ case class Network(netid: String, nodelist: String) extends OLog with LocalNode 
     if (circleNR.encbits.bitCount > 0) {
       //      log.debug("wall to DCircle:" + messageId + ",Dnodescount=" + directNodes.size + ",enc=" +
       //        node_strBits())
-      circleNR.broadcastMessage(gcmd, body, from = root())(toN = root(), network = this, nextHops = nextHops, messageid = messageId)
+      circleNR.broadcastMessage(gcmd, body, from = root(),priority)(toN = root(), network = this, nextHops = nextHops, messageid = messageId)
     }
     pendingNodes.map(n =>
       {
